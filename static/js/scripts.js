@@ -1,5 +1,6 @@
 (function () {
     var Message;
+    // Takes message and displays it to "messages" area
     Message = function (arg) {
         this.text = arg.text, this.message_side = arg.message_side;
         this.draw = function (_this) {
@@ -15,27 +16,32 @@
         }(this);
         return this;
     };
-
+    // sends user input to backend for processing
     sendInputData = function (user_input){
+        var msg = new Message({
+            text: '',
+            message_side: 'left'
+        })
         $.ajax({
             type: 'POST',
-            url: 'localhost:5000/bot',
+            url: '/bot',
             data: user_input,
             success: function(output){
-                console.log("Sending user input to backend....")
+                console.log(output);
+                msg.text = output;
+                msg.draw();
             },
             error: function(e){
                 console.log("Unable to send data to backend! " + e)
             }
-
         })
         console.log(user_input)
     }
-
+    // response from backend. Expected processed data
     receiveInputData = function(){
         $.ajax({
             type: 'GET',
-            url: 'localhost:5000/bot',
+            url: '/bot',
             success: function() {
                 console.log("Data from BOT received successfully")
             },
@@ -44,6 +50,7 @@
             }
         })
     }
+    // Sends the actual input to be displayed.
     $(function () {
         var getMessageText, sendMessage;
         getMessageText = function () {
