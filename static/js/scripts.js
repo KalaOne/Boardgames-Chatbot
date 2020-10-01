@@ -15,9 +15,37 @@
         }(this);
         return this;
     };
+
+    sendInputData = function (user_input){
+        $.ajax({
+            type: 'POST',
+            url: 'localhost:5000/bot',
+            data: user_input,
+            success: function(output){
+                console.log("Sending user input to backend....")
+            },
+            error: function(e){
+                console.log("Unable to send data to backend! " + e)
+            }
+
+        })
+        console.log(user_input)
+    }
+
+    receiveInputData = function(){
+        $.ajax({
+            type: 'GET',
+            url: 'localhost:5000/bot',
+            success: function() {
+                console.log("Data from BOT received successfully")
+            },
+            error: function(e) {
+                console.log("Did not receive data from Bot", e)
+            }
+        })
+    }
     $(function () {
-        var getMessageText, message_side, sendMessage;
-        message_side = 'right';
+        var getMessageText, sendMessage;
         getMessageText = function () {
             var $message_input;
             $message_input = $('.message_input');
@@ -30,28 +58,23 @@
             }
             $('.message_input').val('');
             $messages = $('.messages');
-            message_side = message_side === 'left' ? 'right' : 'left';
             message = new Message({
                 text: text,
-                message_side: message_side
+                message_side: 'right'
             });
             message.draw();
             return $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 300);
         };
         $('.send_message').click(function (e) {
+            sendInputData(getMessageText());
             return sendMessage(getMessageText());
         });
         $('.message_input').keyup(function (e) {
             if (e.which === 13) {
+                sendInputData(getMessageText());
                 return sendMessage(getMessageText());
             }
         });
-        sendMessage('Hello Philip! :)');
-        setTimeout(function () {
-            return sendMessage('Hi Sandy! How are you?');
-        }, 1000);
-        return setTimeout(function () {
-            return sendMessage('I\'m fine, thank you!');
-        }, 2000);
+        sendMessage('Hello Bot! :)');
     });
 }.call(this));
