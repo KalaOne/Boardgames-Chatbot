@@ -10,12 +10,6 @@ app.config.update(
 def hi():
     return render_template('index.html')
 
-@app.route('/botmaybe', methods=["GET"])
-def respond_to_user_input(self):
-    checkout = print("Sending response.... ")
-    return render_template('index.html', response = checkout)
-
-
 @app.route('/bot', methods=["POST"])
 def receive_user_input():
     # send json for object (many vars, states etc...)

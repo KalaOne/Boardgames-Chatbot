@@ -1,5 +1,10 @@
 (function () {
     var Message;
+    // var imageBot = document.createElement("img");
+    // var imageYou = document.createElement("img");
+    // var imageLocation = $("avatar");
+    // imageBot.src = "C:/Users/Home/Desktop/Uni work/Year 3/Project/Boardgames Chatbot/bot.png";
+    
     // Takes message and displays it to "messages" area
     Message = function (arg) {
         this.text = arg.text, this.message_side = arg.message_side;
@@ -9,6 +14,12 @@
                 $message = $($('.message_template').clone().html());
                 $message.addClass(_this.message_side).find('.text').html(_this.text);
                 $('.messages').append($message);
+                // if (this.message_side === "left") {
+                //     imageLocation.append(imageBot);
+                // }
+                // else if(this.message_side === "right") {
+                //     imageLocation.append(imageYou);
+                // }
                 return setTimeout(function () {
                     return $message.addClass('appeared');
                 }, 0);
@@ -17,11 +28,13 @@
         return this;
     };
     // sends user input to backend for processing
-    sendInputData = function (user_input){
+    sendInputData = function (user_input) {
+        // create message object to be displayed in the chat area
         var msg = new Message({
             text: '',
             message_side: 'left'
         })
+        // request to the backend
         $.ajax({
             type: 'POST',
             url: '/bot',
@@ -29,7 +42,9 @@
             success: function(output){
                 console.log(output);
                 msg.text = output;
-                msg.draw();
+                if (user_input) {
+                    msg.draw();
+                }
             },
             error: function(e){
                 console.log("Unable to send data to backend! " + e)
@@ -37,19 +52,7 @@
         })
         console.log(user_input)
     }
-    // response from backend. Expected processed data
-    receiveInputData = function(){
-        $.ajax({
-            type: 'GET',
-            url: '/bot',
-            success: function() {
-                console.log("Data from BOT received successfully")
-            },
-            error: function(e) {
-                console.log("Did not receive data from Bot", e)
-            }
-        })
-    }
+
     // Sends the actual input to be displayed.
     $(function () {
         var getMessageText, sendMessage;
