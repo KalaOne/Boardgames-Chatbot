@@ -75,7 +75,7 @@
             message.draw();
             return $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 300);
         };
-        $('.send_message').click(function (e) {
+        $('.send_message').click(function () {
             sendInputData(getMessageText());
             return sendMessage(getMessageText());
         });
