@@ -1,11 +1,14 @@
-from flask import Flask, render_template
 import psycopg2
+from flask import Flask, render_template, request, jsonify
+from bot.Chat import Chat
+
 
 app = Flask(__name__, template_folder='templates')
 app.config.update(
     DEBUG=True,
     TEMPLATES_AUTO_RELOAD=True
 )
+this_chat = None
 
 def connect_db():
     # conn = psycopg2.connect("dbname=postgres user=postgres password=postgres")
@@ -26,11 +29,25 @@ def hi():
 
 @app.route('/', methods=["POST"])
 def receive_user_input():
-    # send json for object (many vars, states etc...)
-    response = "Yes please!"
-    print("User input received... ")
-    connect_db()
-    return response
+    global this_chat
+    this_chat = Chat()
+    
+    message_input = request.form.get('message_input')
+    print("User input IN MAIN ", message_input)
+    try:
+        response = this_chat.add_message("human", message_input)
+    except Exception as e:
+        print(e)
+        message = ["Sorry! There has been an issue with this chat, please "
+                    "reload the page to start a new chat."]
+        response = message[0]
+
+    print("IN MAIN ",response)
+    return jsonify({"message":response})
+   
+
+    # connect_db()
+
 
 if __name__ == '__main__':
     app.run()
