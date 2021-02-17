@@ -28,13 +28,11 @@ $(function () {
 
 // Sends the actual input to be displayed.
 function getMessageText() {
-    console.log("getMessage")
     var $message_input = $('.message_input');
     return $message_input.val();
 };
 
 function sendMessage(text) {
-    console.log("Send message")
     var $messages, message;
     if (text.trim() === '') {
         return;
@@ -51,7 +49,6 @@ function sendMessage(text) {
 
  // sends user input to backend for processing
  function makeAjaxCall(user_input) {
-     console.log("Send input data")
     // create message object to be displayed in the chat area
     var msg = new Message({
         text: '',
@@ -64,8 +61,8 @@ function sendMessage(text) {
         datatype: "json",
         data: {"message_input" : user_input},
         success: function(output){
-            console.log(output);
-            msg.text = output;
+            console.log(output.message);
+            msg.text = output.message;
             if (user_input) {
                 msg.write();
             }
@@ -78,6 +75,7 @@ function sendMessage(text) {
 
 // Takes message and displays it to "messages" area
 function Message(arg) {
+    console.log("text in Message object: " + arg.text);
     this.text = arg.text, this.message_side = arg.message_side;
     let author;
     if (this.message_side === 'left') { author = "bot";}
@@ -86,14 +84,13 @@ function Message(arg) {
         return function () {
             var $message;
             $message = $($('.message_template').clone().html());
-            $message.addClass(_this.message_side).find('.text').html(_this.text);
+            if (_this.text.message) {
+                $message.addClass(_this.message_side).find('.text').html(_this.text.message);
+            } else {
+                $message.addClass(_this.message_side).find('.text').html(_this.text);
+            }
+            console.log($message);
             $('.messages').append($message);
-            // if (this.message_side === "left") {
-            //     imageLocation.append(imageBot);
-            // }
-            // else if(this.message_side === "right") {
-            //     imageLocation.append(imageYou);
-            // }
             return setTimeout(function () {
                 return $message.addClass('appeared');
             }, 0);

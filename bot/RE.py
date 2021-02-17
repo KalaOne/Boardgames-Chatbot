@@ -52,9 +52,9 @@ class ReasoningEngine(KnowledgeEngine):
         priority == 1 - first message.
         """
         if priority == 0:
-            self.message.append(message)
+            self.message.append({'message' : message})
         elif priority == 1:
-            self.message.insert(0, message)
+            self.message.insert(0, {'message' : message})
         elif priority == 7:
             self.tags += message
 
@@ -90,11 +90,10 @@ class ReasoningEngine(KnowledgeEngine):
         print("spacy doc", doc)
         matcher = Matcher(self.nlp.vocab)
         matcher.add("game_info", None, TokenDictionary['game_info'])
-        print("matcher", matcher)
         matches = matcher(doc)
         if len(matches) > 0:
             # likely to be a booking
-            self.update_message_chain("Ok, let's get you informed.")
+            self.update_message_chain("Ok, let's get you informed!")
             self.progress = "dl_dt_al_rt_rs_na_nc_"
             self.modify(f1, action="general")
         # else:
