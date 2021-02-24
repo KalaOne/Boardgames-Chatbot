@@ -27,6 +27,11 @@ $(function () {
     
 });
 
+function scrollToBottom() {
+    $messages = $('.messages');
+    return $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 300);
+}
+
 // Sends the actual input to be displayed.
 function getMessageText() {
     var $message_input = $('.message_input');
@@ -34,18 +39,17 @@ function getMessageText() {
 };
 
 function sendMessage(text) {
-    var $messages, message;
+    var message;
     if (text.trim() === '') {
         return;
     }
     $('.message_input').val('');
-    $messages = $('.messages');
     message = new Message({
         text: text,
         message_side: 'right'
     });
     message.write();
-    return $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 300);
+    return scrollToBottom();
 };
 
  // sends user input to backend for processing
@@ -72,11 +76,13 @@ function sendMessage(text) {
             if(msg.response_required === false){
                 makeAjaxCall("BOTRESPONSE");
             }
+            scrollToBottom();
         },
         error: function(e){
             console.log("Unable to send data to backend! " + e)
         }
     })
+    
 }
 
 // Takes message and displays it to "messages" area
