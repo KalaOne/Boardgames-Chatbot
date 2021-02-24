@@ -2,5 +2,6 @@
     1.1) General information
     1.2) Instructions
     1.3) Reviews
-2)  "how to play" breaks the page - renders the jquery object {message:X, response_req : true}
-    ^ NOT ALWAYS
+
+2) how to?: 
+    3.1) detect different types of intent? - Instructions or Reviews or GeneralInformation - Switch? >> nested if statements

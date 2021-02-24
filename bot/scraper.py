@@ -32,10 +32,11 @@ def scrape(game_name):
     page_scrape = soup(html, "html.parser")
     game_info = page_scrape.find("description")
 
+    # js.Write() takes html. Can write the whole div here and send it to be written.
     print(game_info)
     return "Heyyayaya"
 
 
 
-a = scrape("CHESS")
-print(a)
+# a = scrape("CHESS")
+# print(a)

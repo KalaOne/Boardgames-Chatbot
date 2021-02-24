@@ -10,12 +10,10 @@ class Chat():
     def add_message(self, author, message_text):
 
         if author != "bot":
-            print("inside add_message", message_text)
             self.chat_engine.reset()
             self.chat_engine.declare(Fact(message_text=message_text))
             self.chat_engine.run()
             message = self.chat_engine.message.pop(0)
-            print("inside add_message ",message)
             tags = self.chat_engine.tags
             self.chat_engine.tags = ""
 
@@ -25,7 +23,7 @@ class Chat():
         if len(self.chat_engine.message) > 0:
             message = self.chat_engine.message.pop(0)
         else:
-            message = { 'message' : "Sorry! Something has gone wrong with this chat. "
+            message = { 'message' : "Chat: Sorry! Something has gone wrong with this chat. "
                            "Please reload the page",
-                        'response_required:' : True }
+                        'response_required' : True }
         return message

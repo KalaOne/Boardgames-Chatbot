@@ -1,18 +1,22 @@
 from experta import *
 import spacy
 from spacy.matcher import Matcher, PhraseMatcher
+from .scraper import scrape
 
 
 SingleTokenDictionary = {
     "game_info": [{"LEMMA": {"IN": ["information", "info"]}}],
     "num_players": [{"LEMMA": "player"}],
+    "play_instructions" : [ {"LEMMA": "instruction"}],
+    "general_information" : [{"LEMMA" : "about"}],
+    "reviews" : [{"LEMMA": "review"}],
 
  }
 
 MultiTokenDictionary = {
     "play_instructions" : [
         [{"LEMMA": "instruction"}],
-        [{"POS": "ADV"}, {"POS": "ADP"}, {"POS": "VERB"}]
+        [{"POS": "ADV"}, {"POS": "ADP"}, {"POS": "VERB"}] # Example "How to play"
         
     ],
     "general_information" : [
@@ -41,7 +45,7 @@ class ReasoningEngine(KnowledgeEngine):
         self.progress = ""
 
         # UI output
-        self.default_message = {'message': "I'm sorry. I don't know how to help with that just yet. Please try again",
+        self.default_message = {'message': "Default: I'm sorry. I don't know how to help with that just yet. Please try again",
                                 'response_required': True}
         self.message = []
         self.tags = ""
@@ -69,9 +73,13 @@ class ReasoningEngine(KnowledgeEngine):
 
     def update_message_chain(self, message, priority = 1, response_required = True):
         """
-        priority == 0 - at the back of the stack
-        priority == 1 - first message.
+        priority == 1 - at the back of the stack
+        priority == 0 - first message.
         """
+        if (len(self.message) == 1 and
+                self.default_message in self.message and
+                priority != 7):
+            self.message = []
         if priority == 0:
             self.message.append({'message' : message, 'response_required' : response_required})
         elif priority == 1:
@@ -80,24 +88,28 @@ class ReasoningEngine(KnowledgeEngine):
             self.tags += message
 
     def get_single_match(self, doc, pattern):
+        for token in doc:
+            print(token.text, token.pos_, token.dep_, token.lemma_)
         matcher = Matcher(self.nlp.vocab)
         if "newMatch" in matcher:
             matcher.remove("newMatch")
-            print("matcher cleared!")
         matcher.add("newMatch", None, pattern)
         matches = matcher(doc)
-        print(matches)
-        if len(matches) > 0:
-            for match_id, start, end in matches:
-                return doc[start:end]
-        return None
+
+        try:
+            if len(matches) > 0:
+                for match_id, start, end in matches:
+                    return doc[start:end]
+        except Exception as e:
+            print(e)
+            return e
+        return ""
 
     def get_multiple_matches(self, doc, pattern):
         match = None
         for p in pattern:
             matches = self.get_single_match(doc, p)
             if matches:
-                print("matches found inside multiple_matches", matches)
                 break
         return matches
 
@@ -133,34 +145,18 @@ class ReasoningEngine(KnowledgeEngine):
         matches = self.get_single_match(doc, SingleTokenDictionary['game_info'])
 
         if len(matches) > 0:
-            # likely to be a booking
             self.update_message_chain("Ok, let's get you informed!", response_required=False)
-            self.update_message_chain("What exactly do you want to know?", priority=0)
             # self.progress = "dl_dt_al_rt_rs_na_nc_"
             self.modify(f1, action="general")
-        
+
         else:
-            print("Before getting multi match")
-            matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
-
-            print("after multimatch",matches)
+            # matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
+            matches = self.get_single_match(doc, SingleTokenDictionary['play_instructions'])
             if (len(matches) > 0) :
-                self.update_message_chain("Cool, here's how to play Monopoly!", response_required=False)
+                self.update_message_chain("Cool, here's how to play Chess!", response_required=False)
+                self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = 0)
 
-
-      
-
-        # else:
-        #     matcher.add("DELAY_PATTERN", None, TokenDictionary['delay'])
-        #     matches = matcher(doc)
-        #     if len(matches) > 0:
-        #         # likely to be a delay prediction
-        #         self.update_message_chain("Using the latest train data, I can "
-        #                                   "predict how long you'll be delayed."
-        #                                   " <br><i>Only available from Norwich to "
-        #                                   "London Liverpool Street and "
-        #                                   "intermediate stations.</i>",
-        #                                   req_response=False)
-        #         self.progress = "dl_al_dt_dd_"
-        #         self.modify(f1, action="delay")
+    # @Rule(Fact(action="general"),
+    #      salience= 99)
+    # def provide_general_info(self):
         
