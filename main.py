@@ -35,22 +35,24 @@ def receive_user_input():
     message_input = request.form['message_input']
     print("User input IN MAIN ", message_input)
 
-    # if message_input == "":
-    #     response = "Greetings user! I can help with any board game related "\
-    #             "topic. Let me know what you desire."
-    #     this_chat = Chat()
-    #     this_chat.add_message("bot", response)
-    # else:
-    try:
-        response = this_chat.add_message("human", message_input)
-    except Exception as e:
-        print(e)
-        message = ["Sorry! There has been an issue with this chat, please "
-                    "reload the page to start a new chat."]
+    if message_input == "BOTRESPONSE" :
+        message = this_chat.pop_message()
         response = message[0]
+        response_required = message[1]
+    else:
+        try:
+            response = this_chat.add_message("human", message_input)
+            response_required = True
+        except Exception as e:
+            print(e)
+            message = ["Exception: Sorry! There has been an issue with this chat, please "
+                        "reload the page to start a new chat", True]
+            response = message[0]
+            response_required = message[1]
 
     print("IN MAIN ",response)
-    return jsonify({"message":response})
+    return jsonify({"message" : response,
+                    "response_required" : response_required})
    
 
     # connect_db()

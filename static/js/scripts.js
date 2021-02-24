@@ -3,7 +3,8 @@
 $(function () {
 
     var openinMessage = new Message({
-        text: "Greetings user! I can help with any board game related topic. Let me know what you desire.",
+        // text: "Greetings user! I can help with any board game related topic. Let me know what you desire.",
+        text: "Greetings user! I can give you information about Chess. Go ahead and ask your questions. E.g. 'How to play' or 'Information'.",
         message_side: 'left'
     });
     openinMessage.write();
@@ -54,6 +55,7 @@ function sendMessage(text) {
         text: '',
         message_side: 'left'
     })
+    console.log("Message received in makeAjaxCall "+ user_input);
     // request to the backend
     $.ajax({
         type: 'POST',
@@ -63,8 +65,12 @@ function sendMessage(text) {
         success: function(output){
             console.log(output.message);
             msg.text = output.message;
+            msg.response_required = output.response_required;
             if (user_input) {
                 msg.write();
+            }
+            if(msg.response_required === false){
+                makeAjaxCall("BOTRESPONSE");
             }
         },
         error: function(e){
