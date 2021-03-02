@@ -5,29 +5,28 @@ from .scraper import scrape
 
 
 SingleTokenDictionary = {
-    "game_info": [{"LEMMA": {"IN": ["information", "info"]}}],
+    "game_info": [{"LEMMA": {"IN": ["information", "info", "about"]}}],
     "num_players": [{"LEMMA": "player"}],
     "play_instructions" : [ {"LEMMA": "instruction"}],
-    "general_information" : [{"LEMMA" : "about"}],
     "reviews" : [{"LEMMA": "review"}],
 
  }
 
 MultiTokenDictionary = {
+    "game_info" : [
+        [{"POS": "PRON"}, {"POS": "AUX", "OP": "*"}, {"POS": "DET", "OP": "*"}, {"POS":"NOUN"}, {"POS": "ADP"}], # "What is the game about"
+        [{"POS": "ADP"}, {"POS": "DET", "OP": "*"}, {"POS": "NOUN"}], # "About the game"
+   
+    ],
+
     "play_instructions" : [
-        [{"LEMMA": "instruction"}],
-        [{"POS": "ADV"}, {"POS": "ADP"}, {"POS": "VERB"}] # Example "How to play"
+        [{"POS": "ADV"}, {"POS": "ADP"}, {"POS": "VERB"}], # "How to play"
+        [{"POS": "ADV"}, {"POS": "PART"}, {"POS": "VERB"}] # "How to play"
         
     ],
-    "general_information" : [
-        [{"POS": "PRON"}, {"POS": "AUX", "OP": "*"}, # Example "What is the game about"
-        {"POS": "NOUN", "LEMMA" : {"IN" : ["game", "boardgame"]}}, 
-        {"POS": "ADP"} ],
-        [{"LEMMA" : "about"}],
-    ],
+    
     "reviews" : [
         [{"POS" : "PRON"}, {"POS" : "VERB", "LEMMA": [{"IN": "review"}]}],
-        [{"LEMMA": "review"}]
     ],
 
                 
@@ -88,14 +87,11 @@ class ReasoningEngine(KnowledgeEngine):
             self.tags += message
 
     def get_single_match(self, doc, pattern):
-        for token in doc:
-            print(token.text, token.pos_, token.dep_, token.lemma_)
         matcher = Matcher(self.nlp.vocab)
         if "newMatch" in matcher:
             matcher.remove("newMatch")
         matcher.add("newMatch", None, pattern)
         matches = matcher(doc)
-
         try:
             if len(matches) > 0:
                 for match_id, start, end in matches:
@@ -132,30 +128,52 @@ class ReasoningEngine(KnowledgeEngine):
           salience=100)
     def direct_action(self, f1, message_text):
         """
-        Directs the engine to the correct action for the message text passed
 
-        Parameters
-        ----------
-        f1: Fact
-            The Fact containing the current action
-        message_text: str
-            The message text passed by the user to the Chat class
         """
         doc = self.process_nlp(message_text)
+        # print out what the tokens are in the user input
+        for token in doc:
+            print(token.text, token.pos_, token.dep_, token.lemma_)
+
         matches = self.get_single_match(doc, SingleTokenDictionary['game_info'])
-
+        print(self.message)
         if len(matches) > 0:
-            self.update_message_chain("Ok, let's get you informed!", response_required=False)
+            print("(S) GAME INFO")
+            self.update_message_chain("(S)General_infromation: Ok, let's get you informed!")
             # self.progress = "dl_dt_al_rt_rs_na_nc_"
-            self.modify(f1, action="general")
-
+            # self.modify(f1, action="general")
+        matches = self.get_multiple_matches(doc, MultiTokenDictionary['game_info'])
+        if len(matches) > 0:
+            print("(M) GAME INFO")
+            self.update_message_chain("(M)General_infromation: Ok, let's get you informed!")
+            # self.progress = "dl_dt_al_rt_rs_na_nc_"
+            # self.modify(f1, action="general")
         else:
-            # matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
+            print(self.message)
             matches = self.get_single_match(doc, SingleTokenDictionary['play_instructions'])
             if (len(matches) > 0) :
-                self.update_message_chain("Cool, here's how to play Chess!", response_required=False)
+                print("(S) Instructions")
+                self.update_message_chain("(S)Instructions: Cool, here's how to play Chess!", response_required=False)
                 self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = 0)
-
+            matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
+            if (len(matches) > 0) :
+                print("(M) Instructions")
+                self.update_message_chain("(M)Instructions: Cool, here's how to play Chess!", response_required=False)
+                self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = 0)
+            else:
+                print(self.message)
+                matches = self.get_single_match(doc, SingleTokenDictionary['reviews'])
+                if (len(matches) > 0) :
+                    print("(S) Reviews")
+                    self.update_message_chain("(S)Reviews: This game has some nice reviews. Check this out:", response_required="Random")
+                    self.update_message_chain("<strong>Very nice game!</strong>", priority=0)
+                print(self.message)
+                # matches = self.get_multiple_matches(doc, MultiTokenDictionary['reviews'])
+                # if (len(matches) > 0) :
+                #     self.update_message_chain("(M)Reviews: This game has some nice reviews. Check this out:", response_required="Random")
+                #     self.update_message_chain("<strong>Very nice game!</strong>", priority=0)
+                # else:
+                #     print("AH HELL NAW!")
     # @Rule(Fact(action="general"),
     #      salience= 99)
     # def provide_general_info(self):

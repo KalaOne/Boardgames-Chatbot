@@ -67,12 +67,10 @@ function sendMessage(text) {
         datatype: "json",
         data: {"message_input" : user_input},
         success: function(output){
-            console.log("message object "+msg);
-            console.log(output.message);
             msg.text = output.message;
             msg.response_required = output.response_required;
             if (user_input) {
-                msg.write();
+                    msg.write();
             }
             if(output.response_required === false){
                 makeAjaxCall("BOTRESPONSE");

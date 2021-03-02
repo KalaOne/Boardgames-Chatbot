@@ -35,12 +35,13 @@ def receive_user_input():
     
     if "BOTRESPONSE" in message_input:
         message = this_chat.pop_message()
+        print("BOT RESPONSE>>>>>", message)
         response = message['message']
         response_required = message['response_required']
     else:
         # try:
-        response = this_chat.add_message("human", message_input)
-        response_required = response['response_required']
+            response = this_chat.add_message("human", message_input)
+            response_required = response['response_required']
         # except Exception as e:
         #     print(e)
         #     message = ["Exception: Sorry! There has been an issue with this chat, please "
