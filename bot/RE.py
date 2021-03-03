@@ -141,11 +141,12 @@ class ReasoningEngine(KnowledgeEngine):
             print("(S) GAME INFO")
             self.update_message_chain("(S)General_infromation: Ok, let's get you informed!")
             # self.progress = "dl_dt_al_rt_rs_na_nc_"
-            # self.modify(f1, action="general")
+            self.declare(Fact(general_information = True))
         matches = self.get_multiple_matches(doc, MultiTokenDictionary['game_info'])
         if len(matches) > 0:
             print("(M) GAME INFO")
             self.update_message_chain("(M)General_infromation: Ok, let's get you informed!")
+            self.declare(Fact(general_information = True))
             # self.progress = "dl_dt_al_rt_rs_na_nc_"
             # self.modify(f1, action="general")
         else:
@@ -155,11 +156,13 @@ class ReasoningEngine(KnowledgeEngine):
                 print("(S) Instructions")
                 self.update_message_chain("(S)Instructions: Cool, here's how to play Chess!", response_required=False)
                 self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = 0)
+                self.declare(Fact(instructions = True))
             matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
             if (len(matches) > 0) :
                 print("(M) Instructions")
                 self.update_message_chain("(M)Instructions: Cool, here's how to play Chess!", response_required=False)
                 self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = 0)
+                self.declare(Fact(instructions = True))
             else:
                 print(self.message)
                 matches = self.get_single_match(doc, SingleTokenDictionary['reviews'])
@@ -174,7 +177,9 @@ class ReasoningEngine(KnowledgeEngine):
                 #     self.update_message_chain("<strong>Very nice game!</strong>", priority=0)
                 # else:
                 #     print("AH HELL NAW!")
-    # @Rule(Fact(action="general"),
-    #      salience= 99)
-    # def provide_general_info(self):
-        
+
+    @Rule(Fact(general_information = True),
+         salience= 99)
+    def provide_general_info(self):
+        game_content = scrape("Chess")
+        self.update_message_chain(game_content['description'])
