@@ -25,23 +25,26 @@ def get_game_code(game_name):
 def scrape(game_name):
     
     gamecode = get_game_code(game_name.lower())
-    print(gamecode)
+    print("gamecode: ",gamecode)
     game_content = []
     url = ("https://www.boardgamegeek.com/xmlapi/boardgame/{}".format(gamecode))
     webpage = urlopen(url)
     html = webpage.read()
     page_scrape = soup(html, "html.parser")
+    game_name = page_scrape.find("name", {"primary":"true"}).get_text()
     game_description = page_scrape.find("description").get_text()
     min_players = page_scrape.find("minplayers").get_text()
     max_players = page_scrape.find("maxplayers").get_text()
-    play_time = page_scrape.find("playingtime").get_text()
+    min_play_time = page_scrape.find("minplaytime").get_text()
+    max_play_time = page_scrape.find("maxplaytime").get_text()
     age = page_scrape.find("age").get_text()
    
     game_object = {
+        'name' : game_name,
         'description' : game_description,
         'min_players' : min_players,
         'max_players' : max_players,
-        'play_time' : play_time,
+        'play_time' : min_play_time + " - " + max_play_time,
         'age' : age
     }
     # js.Write() takes html. Can write the whole div here and send it to be written.

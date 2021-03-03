@@ -17,7 +17,8 @@ class Chat():
             tags = self.chat_engine.tags
             self.chat_engine.tags = ""
 
-            return message
+            return [message['message'],
+                    message['response_required']]
 
     def pop_message(self):
         if len(self.chat_engine.message) > 0:

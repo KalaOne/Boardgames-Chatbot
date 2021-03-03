@@ -5,7 +5,9 @@
 
 2) how to?: 
     3.1) detect different types of intent? - Instructions or Reviews or GeneralInformation --- nested if statements
-
+    >> reviews breaks ze code :(
+    >> If update_messages has priority=1, it shows ONLY THAT MESSAGE
+    >> How would a professional (Like Alex) change the UI?
 
 3) Chat
     3.1) Different intents to have differente responses - multi if statements for now
@@ -13,3 +15,5 @@
         3.2.1) Scrape API
         3.2.2) Clear data from tags and other rubbish
         3.2.3) Based on user intent, return specific data.
+
+4) Fix UI because IS UGLEH

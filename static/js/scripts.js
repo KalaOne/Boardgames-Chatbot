@@ -68,11 +68,13 @@ function sendMessage(text) {
         data: {"message_input" : user_input},
         success: function(output){
             msg.text = output.message;
+            console.log("logging response req in JS "+output.response_required);
             msg.response_required = output.response_required;
             if (user_input) {
                 msg.write();
             }
             if(output.response_required === false){
+                console.log("HEY BOT");
                 makeAjaxCall("BOTRESPONSE");
             }
             scrollToBottom();

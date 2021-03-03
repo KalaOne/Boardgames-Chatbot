@@ -5,10 +5,7 @@ from .scraper import scrape
 
 
 SingleTokenDictionary = {
-    "game_info": [{"LEMMA": {"IN": ["information", "info", "about"]}}],
     "num_players": [{"LEMMA": "player"}],
-    "play_instructions" : [ {"LEMMA": "instruction"}],
-    "reviews" : [{"LEMMA": "review"}],
 
  }
 
@@ -16,17 +13,19 @@ MultiTokenDictionary = {
     "game_info" : [
         [{"POS": "PRON"}, {"POS": "AUX", "OP": "*"}, {"POS": "DET", "OP": "*"}, {"POS":"NOUN"}, {"POS": "ADP"}], # "What is the game about"
         [{"POS": "ADP"}, {"POS": "DET", "OP": "*"}, {"POS": "NOUN"}], # "About the game"
-   
+        [{"LEMMA": {"IN": ["information", "info", "about"]}}]
     ],
 
     "play_instructions" : [
         [{"POS": "ADV"}, {"POS": "ADP"}, {"POS": "VERB"}], # "How to play"
-        [{"POS": "ADV"}, {"POS": "PART"}, {"POS": "VERB"}] # "How to play"
-        
+        [{"POS": "ADV"}, {"POS": "PART"}, {"POS": "VERB"}], # "How to play"
+        [{"LEMMA": "instruction"}],
     ],
     
     "reviews" : [
         [{"POS" : "PRON"}, {"POS" : "VERB", "LEMMA": [{"IN": "review"}]}],
+        [{"LEMMA": "review"}],
+
     ],
 
                 
@@ -97,7 +96,6 @@ class ReasoningEngine(KnowledgeEngine):
                 for match_id, start, end in matches:
                     return doc[start:end]
         except Exception as e:
-            print(e)
             return e
         return ""
 
@@ -132,46 +130,29 @@ class ReasoningEngine(KnowledgeEngine):
         """
         doc = self.process_nlp(message_text)
         # print out what the tokens are in the user input
-        for token in doc:
-            print(token.text, token.pos_, token.dep_, token.lemma_)
+        # for token in doc:
+        #     print(token.text, token.pos_, token.dep_, token.lemma_)
 
-        matches = self.get_single_match(doc, SingleTokenDictionary['game_info'])
-        print(self.message)
-        if len(matches) > 0:
-            print("(S) GAME INFO")
-            self.update_message_chain("(S)General_infromation: Ok, let's get you informed!")
-            # self.progress = "dl_dt_al_rt_rs_na_nc_"
-            self.declare(Fact(general_information = True))
         matches = self.get_multiple_matches(doc, MultiTokenDictionary['game_info'])
         if len(matches) > 0:
-            print("(M) GAME INFO")
-            self.update_message_chain("(M)General_infromation: Ok, let's get you informed!")
-            self.declare(Fact(general_information = True))
+            print("GAME INFO")
+            self.update_message_chain("Game_info: Ok, let's get you informed!", response_required=False)
             # self.progress = "dl_dt_al_rt_rs_na_nc_"
-            # self.modify(f1, action="general")
+            self.declare(Fact(general_information = True))
         else:
-            print(self.message)
-            matches = self.get_single_match(doc, SingleTokenDictionary['play_instructions'])
-            if (len(matches) > 0) :
-                print("(S) Instructions")
-                self.update_message_chain("(S)Instructions: Cool, here's how to play Chess!", response_required=False)
-                self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = 0)
-                self.declare(Fact(instructions = True))
             matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
             if (len(matches) > 0) :
-                print("(M) Instructions")
-                self.update_message_chain("(M)Instructions: Cool, here's how to play Chess!", response_required=False)
+                print("Instructions")
+                self.update_message_chain("Instructions: Cool, here's how to play Chess!", response_required=False)
                 self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = 0)
                 self.declare(Fact(instructions = True))
             else:
-                print(self.message)
-                matches = self.get_single_match(doc, SingleTokenDictionary['reviews'])
+                matches = self.get_multiple_matches(doc, MultiTokenDictionary['reviews'])
                 if (len(matches) > 0) :
-                    print("(S) Reviews")
-                    self.update_message_chain("(S)Reviews: This game has some nice reviews. Check this out:", response_required="Random")
+                    print("Reviews")
+                    self.update_message_chain("Reviews: This game has some nice reviews. Check this out:", response_required="Random")
                     self.update_message_chain("<strong>Very nice game!</strong>", priority=0)
-                print(self.message)
-                # matches = self.get_multiple_matches(doc, MultiTokenDictionary['reviews'])
+                # 
                 # if (len(matches) > 0) :
                 #     self.update_message_chain("(M)Reviews: This game has some nice reviews. Check this out:", response_required="Random")
                 #     self.update_message_chain("<strong>Very nice game!</strong>", priority=0)
@@ -182,4 +163,20 @@ class ReasoningEngine(KnowledgeEngine):
          salience= 99)
     def provide_general_info(self):
         game_content = scrape("Chess")
-        self.update_message_chain(game_content['description'])
+        # self.update_message_chain("What information do you need? I can provide general information")
+        self.update_message_chain("General information about {}.".format(game_content['name']), response_required=False, priority=0)
+        self.update_message_chain(game_content['description'], response_required=False, priority=0)
+        self.update_message_chain("Would you like to know anything else?", priority=0)
+        self.declare(Fact(more_info_needed = True))
+
+
+    @Rule(Fact(instructions = True),
+         salience= 99)
+    def provide_instructions(self):
+        self.update_message_chain("After you move the Z, you experience equilibrium!")
+
+    @Rule(Fact(more_info_needed = True),
+         salience= 90)
+    def get_more_info(self):
+        self.update_message_chain("Ah.... What now...?", priority=0)
+    
