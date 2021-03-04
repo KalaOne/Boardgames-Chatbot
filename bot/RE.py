@@ -6,7 +6,7 @@ from .scraper import scrape
 
 SingleTokenDictionary = {
     "num_players": [{"LEMMA": "player"}],
-
+    "reviews" : [{"LEMMA": "review"}],
  }
 
 MultiTokenDictionary = {
@@ -23,8 +23,9 @@ MultiTokenDictionary = {
     ],
     
     "reviews" : [
-        [{"POS" : "PRON"}, {"POS" : "VERB", "LEMMA": [{"IN": "review"}]}],
         [{"LEMMA": "review"}],
+        [{"POS" : "PRON"}, {"POS" : "VERB", "LEMMA": {"IN": ["review"]}}],
+        
 
     ],
 
@@ -139,6 +140,7 @@ class ReasoningEngine(KnowledgeEngine):
             self.update_message_chain("Game_info: Ok, let's get you informed!", response_required=False)
             # self.progress = "dl_dt_al_rt_rs_na_nc_"
             self.declare(Fact(general_information = True))
+            self.modify(f1, action="information")
         else:
             matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
             if (len(matches) > 0) :
@@ -146,19 +148,22 @@ class ReasoningEngine(KnowledgeEngine):
                 self.update_message_chain("Instructions: Cool, here's how to play Chess!", response_required=False)
                 self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = 0)
                 self.declare(Fact(instructions = True))
+                self.modify(f1, action="instructions")
             else:
                 matches = self.get_multiple_matches(doc, MultiTokenDictionary['reviews'])
+                # matches = self.get_single_match(doc, SingleTokenDictionary['reviews'])
                 if (len(matches) > 0) :
                     print("Reviews")
-                    self.update_message_chain("Reviews: This game has some nice reviews. Check this out:", response_required="Random")
+                    self.update_message_chain("Reviews: This game has some nice reviews. Check this out:", response_required=False)
                     self.update_message_chain("<strong>Very nice game!</strong>", priority=0)
+                    self.modify(f1, action="reviews")
                 # 
                 # if (len(matches) > 0) :
                 #     self.update_message_chain("(M)Reviews: This game has some nice reviews. Check this out:", response_required="Random")
                 #     self.update_message_chain("<strong>Very nice game!</strong>", priority=0)
                 # else:
                 #     print("AH HELL NAW!")
-
+        
     @Rule(Fact(general_information = True),
          salience= 99)
     def provide_general_info(self):
