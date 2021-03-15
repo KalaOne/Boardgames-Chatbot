@@ -18,5 +18,6 @@ def connect_db():
             print("Value:", value)
     cur.close()
     conn.close()
+    return games_list
 
-connect_db()
+# connect_db()

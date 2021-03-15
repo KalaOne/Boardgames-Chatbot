@@ -10,19 +10,6 @@ app.config.update(
 )
 this_chat = Chat()
 
-def connect_db():
-    # conn = psycopg2.connect("dbname=postgres user=postgres password=postgres")
-    conn = psycopg2.connect(host='localhost', port=5432, user='postgres', password='postgres')
-    cur = conn.cursor()
-
-    cur.execute('SELECT version()')
-
-    db_version = cur.fetchone()
-    print(db_version)
-
-    cur.close()
-    conn.close()
-
 @app.route('/')
 def hi():
     return render_template('index.html')

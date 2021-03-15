@@ -4,7 +4,9 @@ $(function () {
 
     var openinMessage = new Message({
         // text: "Greetings user! I can help with any board game related topic. Let me know what you desire.",
-        text: "Greetings user! I can give you information about Chess. Go ahead and ask your questions. E.g. 'How to play' or 'Information'.",
+        text: "Greetings user! I can give you information for a few board games (for now). \
+                Specify a game and continue with your questions. If you want to know the \
+                supported list of games, type 'help'.",
         message_side: 'left'
     });
     openinMessage.write();

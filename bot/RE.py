@@ -2,6 +2,7 @@ from experta import *
 import spacy
 from spacy.matcher import Matcher, PhraseMatcher
 from .scraper import scrape
+from .DB import connect_db
 
 MultiTokenDictionary = {
     "game_info" : [
@@ -23,7 +24,7 @@ MultiTokenDictionary = {
     ],
 
     "help": [
-        [{"LEMMA": "help"}],
+        [{"POS" : "NOUN", "LEMMA": "help"}],
 
     ]
 
@@ -46,6 +47,7 @@ class ReasoningEngine(KnowledgeEngine):
                                 'response_required': True}
         self.message = []
         self.tags = ""
+        self.games_list = connect_db()
 
 
     def process_nlp(self, text_to_process):
@@ -115,15 +117,38 @@ class ReasoningEngine(KnowledgeEngine):
             this_fact = {key: value}
             yield Fact(**this_fact)
         if "action" not in self.knowledge.keys():
-            yield Fact(action="start")
+            yield Fact(action="game_selection")
         if "end" not in self.knowledge.keys():
             yield Fact(end=False)
         yield Fact(extra_info_req=False)
 
 
-    @Rule(AS.f1 << Fact(action="start"),
+    @Rule(AS.f1 << Fact(action="game_selection"),
+        Fact(message_text=MATCH.message_text),
+        salience=100)
+    def game_selection(self, f1, message_text):
+        print(message_text)
+        doc = self.process_nlp(message_text)
+        matches = self.get_multiple_matches(doc, MultiTokenDictionary['help'])
+        # User written 'help'
+        if len(matches) > 0:
+            print("HELP")
+            self.update_message_chain("Here is a list of games I can help with.", response_required=False)
+            self.update_message_chain("Which game are you interested in?", priority="low")
+        else:
+            # user typed a particular game name
+            for game, rating in self.games_list:
+                if message_text.lower() == game.lower():
+                    print("Game within Database")
+                    self.update_message_chain("Selected game: {}").format(message_text)
+                    self.modify(f1, action="game_selected")
+                else:
+                    print("Can't find the game asked for. :(")
+                    self.update_message_chain("Sorry, currently I don't support {}. For a list of supported games, type 'help'.").format(message_text)
+
+    @Rule(AS.f1 << Fact(action="game_selected"),
           Fact(message_text=MATCH.message_text),
-          salience=100)
+          salience=99)
     def direct_action(self, f1, message_text):
         """
 
@@ -134,37 +159,31 @@ class ReasoningEngine(KnowledgeEngine):
         # for token in doc:
         #     print(token.text, token.pos_, token.dep_, token.lemma_)
         print("message from user", message_text)
-        matches = self.get_multiple_matches(doc, MultiTokenDictionary['help'])
         
+        matches = self.get_multiple_matches(doc, MultiTokenDictionary['game_info'])
         if len(matches) > 0:
-            print("HELP")
-            self.update_message_chain("Here is a list of games I can help with.", response_required=False)
-            self.update_message_chain("Which game are you interested in?", priority="")
+            print("GAME INFO")
+            self.update_message_chain("Game_info: Ok, let's get you informed!", response_required=False, priority="high")
+            # self.progress = "dl_dt_al_rt_rs_na_nc_"
+            self.declare(Fact(general_information = True))
+            self.modify(f1, action="information")
         else:
-            matches = self.get_multiple_matches(doc, MultiTokenDictionary['game_info'])
-            if len(matches) > 0:
-                print("GAME INFO")
-                self.update_message_chain("Game_info: Ok, let's get you informed!", response_required=False, priority="high")
-                # self.progress = "dl_dt_al_rt_rs_na_nc_"
-                self.declare(Fact(general_information = True))
-                self.modify(f1, action="information")
+            matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
+            if (len(matches) > 0) :
+                print("Instructions")
+                self.update_message_chain("Instructions: Cool, here's how to play Chess!", response_required=False, priority="high")
+                self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = "low")
+                print(self.message)
+                self.declare(Fact(instructions = True))
+                self.modify(f1, action="instructions")
             else:
-                matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
+                matches = self.get_multiple_matches(doc, MultiTokenDictionary['reviews'])
                 if (len(matches) > 0) :
-                    print("Instructions")
-                    self.update_message_chain("Instructions: Cool, here's how to play Chess!", response_required=False, priority="high")
-                    self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = "low")
-                    print(self.message)
-                    self.declare(Fact(instructions = True))
-                    self.modify(f1, action="instructions")
-                else:
-                    matches = self.get_multiple_matches(doc, MultiTokenDictionary['reviews'])
-                    if (len(matches) > 0) :
-                        print("Reviews")
-                        self.update_message_chain("Reviews: This game has some nice reviews. Check this out:", response_required=False, priority="high")
-                        self.update_message_chain("<strong>Very nice game!</strong>", response_required=False, priority="low")
-                        self.modify(f1, action="reviews")
-                        self.declare(Fact(reviews = True))
+                    print("Reviews")
+                    self.update_message_chain("Reviews: This game has some nice reviews. Check this out:", response_required=False, priority="high")
+                    self.update_message_chain("<strong>Very nice game!</strong>", response_required=False, priority="low")
+                    self.modify(f1, action="reviews")
+                    self.declare(Fact(reviews = True))
                 # 
                 # if (len(matches) > 0) :
                 #     self.update_message_chain("(M)Reviews: This game has some nice reviews. Check this out:", response_required="Random")

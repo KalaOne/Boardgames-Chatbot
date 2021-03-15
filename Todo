@@ -22,6 +22,8 @@ Bugs [sorted?]:
     3.1) pull game names into DB
     3.2) Ask user for specific game
 
+4) Add stuff
+    4.1) Reflective background for different games. 
 
 
 
@@ -31,10 +33,12 @@ Bugs [sorted?]:
 
 
 2) how to?: 
-    3.1) detect different types of intent? - Instructions or Reviews or GeneralInformation --- nested if statements
-    >> reviews breaks ze code :( [Y]
-    >> If update_messages has priority=1, it shows ONLY THAT MESSAGE [Y] - Because of response_required.
+    >> create <ul> in python to be displayed to UI?
 
+
+
+    >> detect different types of intent? - Instructions or Reviews or GeneralInformation --- nested if statements
+    >> If update_messages has priority=1, it shows ONLY THAT MESSAGE [Y] - Because of response_required.
     >> follow-up on "Anything else?"
         -- using tags for user intent to detect if they need more information.
         -- "return? " -> user response {TAG}*user_response* 
