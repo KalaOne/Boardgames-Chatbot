@@ -1,7 +1,34 @@
-1) Get API call for information about the game
+Bugs [sorted?]:
+    B) [n] Information/Info not always display the initial message - "Game_inf:Ok let's get you informed"
+    B) [n] Not resetting states. Using previous state on refresh page.
+    B) [n] Chat engine seems to continue from the previous state. Example if ask same question twice - "How to play" //// Can not represent
+    B) [n] Can't display images on bot. It doesn't appear in the circle.
+
+
+1) Get API call for information about the game [Y]
     1.1) General information
     1.2) Instructions
     1.3) Reviews
+    1.4 Help
+
+2) Chat  [Y]
+    2.1) Different intents to have differente responses - multi if statements for now
+    2.2) Each action to make API call and print out data related to the intent
+        2.2.1) Scrape API
+        2.2.2) Clear data from tags and other rubbish
+        2.2.3) Based on user intent, return specific data.
+
+3) List of many games
+    3.1) pull game names into DB
+    3.2) Ask user for specific game
+
+
+
+
+
+
+
+
 
 2) how to?: 
     3.1) detect different types of intent? - Instructions or Reviews or GeneralInformation --- nested if statements
@@ -12,15 +39,5 @@
         -- using tags for user intent to detect if they need more information.
         -- "return? " -> user response {TAG}*user_response* 
 
-3) Chat
-    3.1) Different intents to have differente responses - multi if statements for now
-    3.2) Each action to make API call and print out data related to the intent
-        3.2.1) Scrape API
-        3.2.2) Clear data from tags and other rubbish
-        3.2.3) Based on user intent, return specific data.
 
 
-Bugs [sorted?]:
-    B) [n] Information/Info not always display the initial message - "Game_inf:Ok let's get you informed"
-    B) [n] Not resetting states. Using previous state on refresh page.
-    B) [n] Chat engine seems to continue from the previous state. Example if ask same question twice - "How to play" //// Can not represent
