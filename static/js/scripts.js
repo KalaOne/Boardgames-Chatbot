@@ -20,11 +20,6 @@ $(function () {
         }
     });
 
-    // var imageBot = document.createElement("img");
-    // var imageYou = document.createElement("img");
-    // var imageLocation = $("avatar");
-    // imageBot.src = "C:/Users/Home/Desktop/Uni work/Year 3/Project/Boardgames Chatbot/static/images/bot.png";
-    
 });
 
 function scrollToBottom() {
@@ -68,7 +63,6 @@ function sendMessage(text) {
         data: {"message_input" : user_input},
         success: function(output){
             msg.text = output.message;
-            console.log("logging response req in JS "+output.response_required);
             msg.response_required = output.response_required;
             if (user_input) {
                 msg.write();
@@ -91,6 +85,7 @@ function Message(arg) {
     console.log("text in Message object: " + arg.text);
     this.text = arg.text, this.message_side = arg.message_side;
     let author;
+        
     if (this.message_side === 'left') { author = "bot";}
     else { author = "human"; }
     this.write = function (_this) {
@@ -102,7 +97,7 @@ function Message(arg) {
             } else {
                 $message.addClass(_this.message_side).find('.text').html(_this.text);
             }
-            console.log($message);
+        
             $('.messages').append($message);
             return setTimeout(function () {
                 return $message.addClass('appeared');

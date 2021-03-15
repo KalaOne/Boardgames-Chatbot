@@ -8,7 +8,6 @@
     >> reviews breaks ze code :( [Y]
     >> If update_messages has priority=1, it shows ONLY THAT MESSAGE [Y] - Because of response_required.
 
-    >> favicon not found :/
     >> follow-up on "Anything else?"
         -- using tags for user intent to detect if they need more information.
         -- "return? " -> user response {TAG}*user_response* 
@@ -20,7 +19,8 @@
         3.2.2) Clear data from tags and other rubbish
         3.2.3) Based on user intent, return specific data.
 
-4) Fix UI because IS UGLEH
 
-
-UI improvements -> colors on the text of messages - precisely bot responses
+Bugs [sorted?]:
+    B) [n] Information/Info not always display the initial message - "Game_inf:Ok let's get you informed"
+    B) [n] Not resetting states. Using previous state on refresh page.
+    B) [n] Chat engine seems to continue from the previous state. Example if ask same question twice - "How to play" //// Can not represent

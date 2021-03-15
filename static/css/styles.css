@@ -51,6 +51,7 @@
   }
   .messages .message.left .avatar {
     background-color: #f5886e;
+    background-image: url('../images/favicon_bot.png');
     float: left;
   }
   .messages .message.left .text_wrapper {
@@ -62,7 +63,7 @@
     border-right-color: #ffe6cb;
   }
   .messages .message.left .text {
-    color: #c48843;
+    color: #4d4945;
   }
   .messages .message.right .avatar {
     background-color: #fdbf68;
@@ -78,7 +79,7 @@
     border-left-color: #c7eafc;
   }
   .messages .message.right .text {
-    color: #45829b;
+    color: #4d4945;
     float: right;
   }
   .messages .message.appeared {
@@ -117,7 +118,7 @@
   }
   .messages .message .text_wrapper .text {
     font-size: 18px;
-    font-weight: 300;
+    font-weight: 400;
   }
   
   .bottom_wrapper {
