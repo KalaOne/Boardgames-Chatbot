@@ -52,6 +52,7 @@
   .messages .message.left .avatar {
     background-color: #f5886e;
     background-image: url('../images/favicon_bot.png');
+    background-size: contain;
     float: left;
   }
   .messages .message.left .text_wrapper {

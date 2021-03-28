@@ -11,11 +11,11 @@ def connect_db():
     cur.execute("SELECT * FROM Games")
     games_list = cur.fetchall()
     # print(games_list)
-    print(type(games_list))
-    for key, value in games_list:
-        if key == 'Monopoly':
-            print("YES !")
-            print("Value:", value)
+
+    # for key, value in games_list:
+    #     if key == 'Monopoly':
+    #         print("YES !")
+    #         print("Value:", value)
     cur.close()
     conn.close()
     return games_list

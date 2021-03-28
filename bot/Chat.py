@@ -6,9 +6,9 @@ class Chat():
 
     def __init__(self):
         self.chat_engine = ReasoningEngine()
+        print()
 
     def add_message(self, author, message_text):
-
         if author != "bot":
             self.chat_engine.reset()
             self.chat_engine.declare(Fact(message_text=message_text))

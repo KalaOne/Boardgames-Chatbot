@@ -24,7 +24,7 @@ MultiTokenDictionary = {
     ],
 
     "help": [
-        [{"POS" : "NOUN", "LEMMA": "help"}],
+        [{"LEMMA": "help"}],
 
     ]
 
@@ -110,7 +110,7 @@ class ReasoningEngine(KnowledgeEngine):
 
     @DefFacts()
     def _initial_action(self):
-        print("_initial_aciton facts:", self.knowledge)
+        print("_initial_aciton facts:", self.facts)
         if len(self.message) == 0:
             self.message = [self.default_message]
         for key, value in self.knowledge.items():
@@ -127,26 +127,68 @@ class ReasoningEngine(KnowledgeEngine):
         Fact(message_text=MATCH.message_text),
         salience=100)
     def game_selection(self, f1, message_text):
-        print(message_text)
+        print("game_selection", message_text)
+        print("Facts available.", self.facts)
         doc = self.process_nlp(message_text)
         matches = self.get_multiple_matches(doc, MultiTokenDictionary['help'])
+        game_in_db = None
+        first_message = True
+        
         # User written 'help'
         if len(matches) > 0:
             print("HELP")
+            first_message = False
             self.update_message_chain("Here is a list of games I can help with.", response_required=False)
+            ############## Add here all games available ###############
             self.update_message_chain("Which game are you interested in?", priority="low")
+            self.modify(f1, action="help")
+            self.halt()
         else:
             # user typed a particular game name
             for game, rating in self.games_list:
-                if message_text.lower() == game.lower():
+# print("Comparison: ", game.lower(), message_text)
+                if game.lower() == message_text.lower():
                     print("Game within Database")
-                    self.update_message_chain("Selected game: {}").format(message_text)
-                    self.modify(f1, action="game_selected")
+                    game_in_db = True
+                    break
                 else:
                     print("Can't find the game asked for. :(")
-                    self.update_message_chain("Sorry, currently I don't support {}. For a list of supported games, type 'help'.").format(message_text)
+                    if not first_message:
+                        game_in_db = False
+                    
+        print("Game found?", game_in_db)
+        # self.modify(f1, action="random")
+        if game_in_db == True:
+            message = "Selected game: {}".format(message_text)
+            self.update_message_chain(message, response_required=False, priority="high")
+            self.modify(f1, action="game_selected")
+        elif game_in_db == False:
+            message = "Sorry, currently I don't support {}. For a list of supported games, type 'help'.".format(message_text).capitalize()
+            self.update_message_chain(message)
+            self.modify(f1, action="game_not_found")
+
+    @Rule(AS.f1 << Fact(action="help"),
+        salience=95)
+    def help_requested(self, f1):
+        self.update_message_chain("Here is a list of games I can help with.", response_required=False)
+        self.update_message_chain("Which game are you interested in?", priority="low")
+        self.modify(f1, action="game_selection")
+
 
     @Rule(AS.f1 << Fact(action="game_selected"),
+        salience=95)
+    def game_selected(self, f1):
+        print("game selected facts", self.facts)
+        self.update_message_chain("I can help with X Y |", priority="low")
+        self.modify(f1, action="random")
+    
+    @Rule(Fact(action="game_not_found"),
+        salience=96)
+    def game_not_found(self):
+        print("game not found facts", self.facts)
+        self.update_message_chain("Fact:Game not found. Awwww, I'll cry ;( ")
+
+    @Rule(AS.f1 << Fact(action="random"),
           Fact(message_text=MATCH.message_text),
           salience=99)
     def direct_action(self, f1, message_text):
@@ -190,7 +232,6 @@ class ReasoningEngine(KnowledgeEngine):
                 #     self.update_message_chain("<strong>Very nice game!</strong>", priority=0)
                 # else:
                 #     print("AH HELL NAW!")
-        print(self.knowledge)
         
     @Rule(Fact(action="information"),
          salience= 91)
@@ -207,7 +248,7 @@ class ReasoningEngine(KnowledgeEngine):
         Fact(instructions = True),
          salience= 99)
     def provide_instructions(self):
-        self.update_message_chain("After you move the Z, you experience equilibrium!", priority="high")
+        self.update_message_chain("After you move the Z, you experience equilibrium!", priority="high", response_required=False)
         self.update_message_chain("Instructions: Would you like to know anything else?", priority="low")
 
     @Rule(Fact(action="reviews"),
