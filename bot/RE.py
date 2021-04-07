@@ -3,6 +3,7 @@ import spacy
 from spacy.matcher import Matcher, PhraseMatcher
 from .scraper import scrape
 from .DB import connect_db
+import difflib
 
 MultiTokenDictionary = {
     "game_info" : [
@@ -25,6 +26,7 @@ MultiTokenDictionary = {
 
     "help": [
         [{"LEMMA": "help"}],
+        [{"LEMMA": "assistance"}]
 
     ]
 
@@ -49,6 +51,16 @@ class ReasoningEngine(KnowledgeEngine):
         self.tags = ""
         self.games_list = connect_db()
 
+
+    def game_name_similarity(self, game_name):
+        result = None
+        for game in self.games_list:
+            seq = difflib.SequenceMatcher(lambda x: x in " \t", game_name, game)
+            r = seq.ratio()*100
+            if r > 70:
+                result = game
+        
+        return result
 
     def process_nlp(self, text_to_process):
         """
@@ -139,9 +151,13 @@ class ReasoningEngine(KnowledgeEngine):
             print("HELP")
             first_message = False
             self.update_message_chain("Here is a list of games I can help with.", response_required=False)
-            ############## Add here all games available ###############
+            list_of_games = '''<div class="list-games"><ul>'''
+            for game, rating in self.games_list:
+                list_of_games += '''<li> {} </li> '''.format(game)
+            list_of_games += '''</ul></div>'''
+            self.update_message_chain(list_of_games, priority="low", response_required=False)
             self.update_message_chain("Which game are you interested in?", priority="low")
-            self.modify(f1, action="help")
+            # self.modify(f1, action="help")
             self.halt()
         else:
             # user typed a particular game name
@@ -166,14 +182,6 @@ class ReasoningEngine(KnowledgeEngine):
             message = "Sorry, currently I don't support {}. For a list of supported games, type 'help'.".format(message_text).capitalize()
             self.update_message_chain(message)
             self.modify(f1, action="game_not_found")
-
-    @Rule(AS.f1 << Fact(action="help"),
-        salience=95)
-    def help_requested(self, f1):
-        self.update_message_chain("Here is a list of games I can help with.", response_required=False)
-        self.update_message_chain("Which game are you interested in?", priority="low")
-        self.modify(f1, action="game_selection")
-
 
     @Rule(AS.f1 << Fact(action="game_selected"),
         salience=95)
