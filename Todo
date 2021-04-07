@@ -11,10 +11,19 @@ Bugs [sorted?]:
 Go to through levels of journey : 1->2->3->4 - in 4) set a particular fact to one needed in 3) and 3) should handle it from there.
 
 
+ToDo:
+    - Add game codes in the DB for each game
+    - Pull lots of game names into the DB
+    - 
+
 Add stuff
     - Suggestions for games based on the user experience?? Is it possible? How will I classify games? Maybe ask for user for games they like and suggest similar from "People also like...." type of thing?
             - Investigate what's available for new people.
     - Reflective background for different games. 
+
+
+
+
 
 
 

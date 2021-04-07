@@ -4,27 +4,32 @@ from urllib.request import urlopen
 from bs4  import BeautifulSoup as soup
 
 game_codes = {
-    "chess" : "171",
     "monopoly" : "1406",
     "uno" : "2223",
     "scrabble" : "320",
     "domino dice" :"3805",
+    "scythe" : "169786",
+    "chess" : "171",
 
 
 }
 
 def get_game_code(game_name):
     for g, value in game_codes.items():
-        if g in game_codes.keys():
-            return value
-    else:
-        print("No such game found :(")
-        return {"message" : "I couldn't find such game in our repertoire. Maybe try again?",
-                "response_required" : True}
+        if game_name in game_codes.keys():
+            return game_codes[game_name]
+        else:
+            print("No such game found :(")
+            return {"message" : "I couldn't find such game in our repertoire. Maybe try again?",
+                    "response_required" : True}
+    return None
 
 def scrape(game_name):
-    
-    gamecode = get_game_code(game_name.lower())
+    try:
+        gamecode = get_game_code(game_name.lower())
+    except Exception:
+        print("can't find {} game code".format(game_name))
+        return "Couldn't find the game code"
     print("gamecode: ",gamecode)
     game_content = []
     url = ("https://www.boardgamegeek.com/xmlapi/boardgame/{}".format(gamecode))
