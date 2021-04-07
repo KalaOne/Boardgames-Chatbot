@@ -1,8 +1,23 @@
 Bugs [sorted?]:
-    B) [n] Information/Info not always display the initial message - "Game_inf:Ok let's get you informed"
-    B) [n] Not resetting states. Using previous state on refresh page.
-    B) [n] Chat engine seems to continue from the previous state. Example if ask same question twice - "How to play" //// Can not represent
-    B) [n] Can't display images on bot. It doesn't appear in the circle.
+    B) [n] 
+    -----------------------
+    B) [y] Information/Info not always display the initial message - "Game_inf:Ok let's get you informed"
+    B) [y] Can't modify facts more than once in a single function. - If "help" - modify f1, else modify f1 
+    B) [y] Chat engine seems to continue from the previous state. Example if ask same question twice - "How to play" //// Can not represent
+    B) [y] Not resetting states. Using previous state on refresh page.
+    B) [y] When type something fact related, response is a new localhost page, without any structure or styles -- static\bugs\new page display without structure.JPG
+    B) [y] Can't display images on bot. It doesn't appear in the circle.
+
+Go to through levels of journey : 1->2->3->4 - in 4) set a particular fact to one needed in 3) and 3) should handle it from there.
+
+
+Add stuff
+    - Suggestions for games based on the user experience?? Is it possible? How will I classify games? Maybe ask for user for games they like and suggest similar from "People also like...." type of thing?
+            - Investigate what's available for new people.
+    - Reflective background for different games. 
+
+
+
 
 
 1) Get API call for information about the game [Y]
@@ -23,18 +38,15 @@ Bugs [sorted?]:
     3.2) Ask user for specific game
 
 
-
-
-
-
-
-
-
 2) how to?: 
-    3.1) detect different types of intent? - Instructions or Reviews or GeneralInformation --- nested if statements
-    >> reviews breaks ze code :( [Y]
-    >> If update_messages has priority=1, it shows ONLY THAT MESSAGE [Y] - Because of response_required.
+    >> create <ul> in python to be displayed to UI?
+    >> What happens when awaiting user input without changing action? Example - "I don't support X. Type help for more."
+    
 
+
+
+    >> detect different types of intent? - Instructions or Reviews or GeneralInformation --- nested if statements
+    >> If update_messages has priority=1, it shows ONLY THAT MESSAGE [Y] - Because of response_required.
     >> follow-up on "Anything else?"
         -- using tags for user intent to detect if they need more information.
         -- "return? " -> user response {TAG}*user_response* 

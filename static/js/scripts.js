@@ -4,22 +4,28 @@ $(function () {
 
     var openinMessage = new Message({
         // text: "Greetings user! I can help with any board game related topic. Let me know what you desire.",
-        text: "Greetings user! I can give you information about Chess. Go ahead and ask your questions. E.g. 'How to play' or 'Information'.",
+        text: "Greetings user! I can give you information for a few board games (for now). \
+                Specify a game and continue with your questions. If you want to know the \
+                supported list of games, type 'help'.",
         message_side: 'left'
     });
-    openinMessage.write();
+
+    // Send opening message to UI
+    makeAjaxCall("");
+
+    // openinMessage.write();
+    $('#form-id').submit(function (e) {
+        console.log("Making a AJAX call");
+        e.preventDefault();
+        let message = getMessageText();
+        makeAjaxCall(message);
+        sendMessage(message);
+    });
 
     $('.send_message').on("click", function () {
         makeAjaxCall(getMessageText());
         return sendMessage(getMessageText());
     });
-    $('.message_input').on("keyup", function (e) {
-        if (e.which === 13) {
-            makeAjaxCall(getMessageText());
-            return sendMessage(getMessageText());
-        }
-    });
-
 });
 
 function scrollToBottom() {
@@ -33,9 +39,9 @@ function getMessageText() {
     return $message_input.val();
 };
 
-function sendMessage(text) {
+function sendMessage(text, first = false) {
     var message;
-    if (text.trim() === '') {
+    if (text.trim() === '' && !first) {
         return;
     }
     $('.message_input').val('');
@@ -44,6 +50,7 @@ function sendMessage(text) {
         message_side: 'right'
     });
     message.write();
+
     return scrollToBottom();
 };
 
@@ -62,10 +69,13 @@ function sendMessage(text) {
         datatype: "json",
         data: {"message_input" : user_input},
         success: function(output){
+            console.log("receiving something? " + output.message)
             msg.text = output.message;
             msg.response_required = output.response_required;
-            if (user_input) {
-                msg.write();
+            if (output.message) {
+                setTimeout(() => {
+                    msg.write();    
+                }, 500);
             }
             if(output.response_required === false){
                 console.log("HEY BOT");

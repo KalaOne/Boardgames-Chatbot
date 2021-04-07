@@ -8,20 +8,7 @@ app.config.update(
     DEBUG=True,
     TEMPLATES_AUTO_RELOAD=True
 )
-this_chat = Chat()
-
-def connect_db():
-    # conn = psycopg2.connect("dbname=postgres user=postgres password=postgres")
-    conn = psycopg2.connect(host='localhost', port=5432, user='postgres', password='postgres')
-    cur = conn.cursor()
-
-    cur.execute('SELECT version()')
-
-    db_version = cur.fetchone()
-    print(db_version)
-
-    cur.close()
-    conn.close()
+this_chat = None
 
 @app.route('/')
 def hi():
@@ -32,28 +19,29 @@ def receive_user_input():
     global this_chat
     
     message_input = request.form['message_input']
-    # if message_input == "":
-    #     response = "Greetings user! I can give you information about Chess. Go ahead and ask your questions. E.g. 'How to play' or 'Information'."
-    #     this_chat = Chat()
-    #     this_chat.add_message("bot", response)
-    #     response_required = True
 
-    if "BOTRESPONSE" in message_input:
+    if message_input == "":
+        this_chat = Chat()
+        response = "Greetings user! I can give you information for a few board games (for now). \
+                Specify a game and continue with your questions. If you want to know the \
+                supported list of games, type 'help'."
+        this_chat.add_message("bot", response)
+        response_required = True
+    elif "BOTRESPONSE" in message_input:
         message = this_chat.pop_message()
         response = message['message']
         response_required = message['response_required']
     else:
-        # try:
-            print("Human is sending message")
+        try:
             message = this_chat.add_message("human", message_input)
             response = message[0]
             response_required = message[1]
-        # except Exception as e:
-        #     print(e)
-        #     message = ["Exception: Sorry! There has been an issue with this chat, please "
-        #                 "reload the page to start a new chat", True]
-        #     response = message[0]
-        #     response_required = message[1]
+        except Exception as e:
+            print(e)
+            message = ["Exception: Sorry! There has been an issue with this chat, please "
+                        "reload the page to start a new chat", True]
+            response = message[0]
+            response_required = message[1]
 
     return jsonify({"message" : response,
                     "response_required" : response_required})
