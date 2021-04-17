@@ -2,6 +2,10 @@ import json
 import re #REGEX
 from urllib.request import urlopen
 from bs4  import BeautifulSoup as soup
+import requests
+from DB import add_games_to_db
+
+# from boardgamegeek import BGGClient
 
 game_codes = {
     "monopoly" : "1406",
@@ -59,3 +63,35 @@ def scrape(game_name):
 
 # a = scrape("CHESS")
 # print(a)
+
+def add_data():
+    response = requests.get('https://www.boardgamegeek.com/browse/boardgame')
+    # url = "https://www.boardgamegeek.com/browse/boardgame"
+    # page = urlopen(response)
+    # html = response.read()
+    scrape = soup(response.text, "html.parser")
+    obj_name = scrape.find_all('tr', id="row_")
+    all_games = []
+    # Got all rows in the current file. Loop through to get individual object to be added to DB.
+    for index, row in enumerate(obj_name, start=1):
+        ratings = row.find_all(class_="collection_bggrating")
+        rank = row.find(class_="collection_rank").get_text()
+        name = row.find(id="results_objectname{}".format(index)).find("a").get_text()
+        bgg_rank = ratings[0].get_text()
+        average_rating = ratings[1].get_text()
+        num_voters = ratings[2].get_text()
+  
+        game_object = {
+            "rank": int(re.sub('[\n\t]' ,'',rank)),
+            "name" : re.sub('[\n\t]' ,'',name),
+            "bgg_rating": re.sub('[\n\t]' ,'',bgg_rank),
+            "average_rating" : re.sub('[\n\t]' ,'',average_rating),
+            "num_voters" : int(re.sub('[\n\t]' ,'',num_voters))
+        }
+        all_games.append(game_object)
+    
+    add_games_to_db(all_games)
+
+    # collectionitems
+
+add_data()
