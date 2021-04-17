@@ -25,21 +25,17 @@ def connect_db():
 def add_games_to_db(all_games):
     cur = conn.cursor()
     for game in all_games:
-        print(game)
-        print(game['rank'])
-    # for game in all_games:
-    #     try:
-    #         query = """INSERT INTO Games VALUES(%s, %s, %s, %s, %s)"""
-    #         values = (game['rank'], game['name'], game['bgg_rating'],
-    #             game['average_rating'],game['num_voters'])
-    #         cur.execute(query,values)
-    #         print("added {} to DataBase".format(all_games['name']))
-    #     except (Exception, psycopg2.DatabaseError) as error:
-    #         print("Unable to add game")
-    #         print(error)
-        
-    # conn.commit()
+        try:
+            query = "INSERT INTO Games VALUES(%s, %s, %s, %s, %s)"
+            values = (game['rank'], game['name'], game['bgg_rating'],
+                game['average_rating'],game['num_voters'])
+            cur.execute(query,values)
+            conn.commit()
+            print("added {} to DataBase".format(game['name']))
+        except (Exception, psycopg2.DatabaseError) as error:
+            print("Unable to add game")
+            print(error)
 
     cur.close()
     conn.close()
-# connect_db()
+
