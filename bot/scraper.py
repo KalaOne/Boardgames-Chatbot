@@ -18,7 +18,7 @@ game_codes = {
 
 }
 
-def get_game_code(game_name):
+def check_game_code_exists(game_name):
     for g, value in game_codes.items():
         if game_name in game_codes.keys():
             return game_codes[game_name]
@@ -94,6 +94,28 @@ def add_data():
             
     # add_games_to_db(all_games)
 
+def store_game_codes_in_db():
+    # for loop to 200000
+    # visit link https://www.boardgamegeek.com/boardgame/{} 
+    # get link after {} number -> store the last bit after "/" as game name
+    # strip the game name of "-"
+    # store game name with it's code in DB
+    
+    # i = 1
+    # while i <= 200000:
+
+    #     i += 1
+    response = requests.get('https://www.boardgamegeek.com/boardgame/2')
+    
+    scrape = soup(response.text, "html.parser").head
+    link = scrape.find(rel='canonical')
+    game_name = "" + link['href']
+    game_name = game_name.split("/")[-1]
+    print(link['href'])
+    print(game_name)
+
+    print("something, yaaay")
 
 
+store_game_codes_in_db()
 # add_data()

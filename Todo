@@ -12,8 +12,8 @@ Go to through levels of journey : 1->2->3->4 - in 4) set a particular fact to on
 
 
 ToDo:
-    - Add game codes in the DB for each game
-    - Pull lots of game names into the DB
+    - Find a way to add game codes in the DB for each game => That returns https://www.boardgamegeek.com/boardgame/?/GAME_NAME. Use it to add games. ? = int.
+    
     - Add more functionality - different functions actions, utilise the data more - Reviews
     - User gaming experience journey
     
@@ -25,7 +25,8 @@ Add stuff
 
 
 
-
+Complete:
++ Pull lots of game names into the DB
 
 
 
