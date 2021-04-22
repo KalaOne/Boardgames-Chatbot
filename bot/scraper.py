@@ -3,7 +3,9 @@ import re #REGEX
 from urllib.request import urlopen
 from bs4  import BeautifulSoup as soup
 import requests
-from DB import add_games_to_db
+from DB import add_games_to_db, add_game_codes_to_db
+from datetime import datetime
+
 
 # from boardgamegeek import BGGClient
 
@@ -14,8 +16,6 @@ game_codes = {
     "domino dice" :"3805",
     "scythe" : "169786",
     "chess" : "171",
-
-
 }
 
 def check_game_code_exists(game_name):
@@ -30,7 +30,7 @@ def check_game_code_exists(game_name):
 
 def scrape(game_name):
     try:
-        gamecode = get_game_code(game_name.lower())
+        gamecode = check_game_code_exists(game_name.lower())
     except Exception:
         print("can't find {} game code".format(game_name))
         return "Couldn't find the game code"
@@ -95,27 +95,31 @@ def add_data():
     # add_games_to_db(all_games)
 
 def store_game_codes_in_db():
-    # for loop to 200000
-    # visit link https://www.boardgamegeek.com/boardgame/{} 
-    # get link after {} number -> store the last bit after "/" as game name
-    # strip the game name of "-"
-    # store game name with it's code in DB
+    start = datetime.now()
+
+    current_time = start.strftime("%H:%M:%S")
+    print("Started at :", current_time)
+    game_list = []
+    i = 1
+    while i <= 200000:
+        response = requests.get('https://www.boardgamegeek.com/boardgame/{}'.format(i))
+        scrape = soup(response.text, "html.parser").head
+        link = scrape.find(rel='canonical')
+        if link:
+            game_link = "" + link['href']
+            game_name = game_link.split("/")[-1].replace("-", " ")
+            game_number = game_link.split("/")[-2]
+            game_object = {
+                "name" : game_name,
+                "code" : game_number
+            }
+            game_list.append(game_object)
+        if (i % 500 == 0):
+            print(i)
+        i += 1
     
-    # i = 1
-    # while i <= 200000:
+    print(len(game_list))
+    # add_game_codes_to_db(game_list)
 
-    #     i += 1
-    response = requests.get('https://www.boardgamegeek.com/boardgame/2')
-    
-    scrape = soup(response.text, "html.parser").head
-    link = scrape.find(rel='canonical')
-    game_name = "" + link['href']
-    game_name = game_name.split("/")[-1]
-    print(link['href'])
-    print(game_name)
-
-    print("something, yaaay")
-
-
-store_game_codes_in_db()
+# store_game_codes_in_db()
 # add_data()

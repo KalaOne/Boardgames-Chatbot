@@ -1,4 +1,10 @@
 import psycopg2
+import psycopg2.extras
+from datetime import datetime
+import pandas as pd
+import csv
+import numpy as np
+
 
 conn = psycopg2.connect(host='localhost', port=5433, user='postgres', password='postgres')
 
@@ -33,9 +39,45 @@ def add_games_to_db(all_games):
             conn.commit()
             print("added {} to DataBase".format(game['name']))
         except (Exception, psycopg2.DatabaseError) as error:
-            print("Unable to add game")
-            print(error)
+            print("Unable to add game.", error)
+            
 
     cur.close()
     conn.close()
 
+
+def add_game_codes_to_db():
+    start = datetime.now()
+    s_time = start.strftime("%H:%M:%S")
+    print("DB adding started at :", s_time)
+
+    cur = conn.cursor()
+
+    df = pd.read_csv('E:/trimmedData.csv', lineterminator='\n', error_bad_lines=False)
+
+    df_col = list(df)
+    columns = ",".join(df_col)
+    values = "VALUES({})".format(",".join(["%s" for _ in df_col]))
+    insert = "INSERT INTO bgg_data ({}) {}".format(columns,values)
+    try:
+        psycopg2.extras.execute_batch(cur, insert, df.values)
+    except psycopg2.DatabaseError as e:
+        print("Unable.", e)
+    conn.commit()
+
+    end = datetime.now()
+    e_time = end.strftime("%H:%M:%S")
+    print("DB addition ended at: ", e_time)
+
+    cur.close()
+    conn.close()
+
+
+def get_similar_names_from_db(name):
+    cur = conn.cursor()
+    name0_query = "SELECT * FROM bgg_data WHERE name0_alt IS NOT NULL AND name0_alt ILIKE '{}'".format(name)
+    cur.execute(name0_query)
+    name0 = cur.fetchall()
+    
+
+get_similar_names_from_db("gloomhaven")
