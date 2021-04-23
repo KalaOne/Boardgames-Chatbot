@@ -8,13 +8,33 @@ Bugs [sorted?]:
     B) [y] When type something fact related, response is a new localhost page, without any structure or styles -- static\bugs\new page display without structure.JPG
     B) [y] Can't display images on bot. It doesn't appear in the circle.
 
+
 Go to through levels of journey : 1->2->3->4 - in 4) set a particular fact to one needed in 3) and 3) should handle it from there.
 
 
-Add stuff
-    - Suggestions for games based on the user experience?? Is it possible? How will I classify games? Maybe ask for user for games they like and suggest similar from "People also like...." type of thing?
-            - Investigate what's available for new people.
-    - Reflective background for different games. 
+ToDo:
+    Functionality:
+        - Compare name of game user has entered. Check if exists in the DB. If typo, suggest it to the user.
+        - Add more functionality - different functions actions, utilise the data more - Reviews
+
+    Journey:
+        - User gaming experience journey
+        - Suggestions for games based on the user experience?? Is it possible? How will I classify games? Maybe ask for user for games they like and suggest similar from "People also like...." type of thing?
+          Investigate what's available for new people.
+
+    Styling:
+        - Reflective background for different games. 
+
+    Ideas:
+    - Find a way to add game codes in the DB for each game => That returns https://www.boardgamegeek.com/boardgame/?/GAME_NAME. Use it to add games. ? = int.
+    
+    Testing:
+        - DB returns correct answers
+        - Scraping?
+        - Conversation flow 
+   
+Complete:
++ Pull lots of game names into the DB
 
 
 
@@ -33,18 +53,15 @@ Add stuff
         2.2.2) Clear data from tags and other rubbish
         2.2.3) Based on user intent, return specific data.
 
-3) List of many games
+3) List of many games [Y]
     3.1) pull game names into DB
     3.2) Ask user for specific game
 
 
-2) how to?: 
+How to?: 
     >> create <ul> in python to be displayed to UI?
     >> What happens when awaiting user input without changing action? Example - "I don't support X. Type help for more."
     
-
-
-
     >> detect different types of intent? - Instructions or Reviews or GeneralInformation --- nested if statements
     >> If update_messages has priority=1, it shows ONLY THAT MESSAGE [Y] - Because of response_required.
     >> follow-up on "Anything else?"

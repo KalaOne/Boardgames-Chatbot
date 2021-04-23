@@ -50,6 +50,7 @@ class ReasoningEngine(KnowledgeEngine):
         self.message = []
         self.tags = ""
         self.games_list = connect_db()
+        self.boardgame = ""
 
 
     def game_name_similarity(self, game_name):
@@ -176,6 +177,7 @@ class ReasoningEngine(KnowledgeEngine):
         # self.modify(f1, action="random")
         if game_in_db == True:
             message = "Selected game: {}".format(message_text)
+            self.boardgame = message_text
             self.update_message_chain(message, response_required=False, priority="high")
             self.modify(f1, action="game_selected")
         elif game_in_db == False:
@@ -187,7 +189,7 @@ class ReasoningEngine(KnowledgeEngine):
         salience=95)
     def game_selected(self, f1):
         print("game selected facts", self.facts)
-        self.update_message_chain("I can help with X Y |", priority="low")
+        self.update_message_chain("I can help provide general information, instructions, reviews and much more. What do you need?", priority="low")
         self.modify(f1, action="random")
     
     @Rule(Fact(action="game_not_found"),
@@ -244,7 +246,7 @@ class ReasoningEngine(KnowledgeEngine):
     @Rule(Fact(action="information"),
          salience= 91)
     def provide_general_info(self):
-        game_content = scrape("Chess")
+        game_content = scrape(self.boardgame)
         # self.update_message_chain("What information do you need? I can provide general information")
         self.update_message_chain("General information about {}.".format(game_content['name']), response_required=False, priority="low")
         self.update_message_chain(game_content['description'], response_required=False, priority="low")

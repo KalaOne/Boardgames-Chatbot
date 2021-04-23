@@ -1,6 +1,7 @@
 import psycopg2
 from flask import Flask, render_template, request, jsonify
 from bot.Chat import Chat
+import csv
 
 
 app = Flask(__name__, template_folder='templates')
@@ -52,6 +53,5 @@ def receive_user_input():
 
 if __name__ == '__main__':
     app.run()
-
 
 #  alias python='winpty python.exe'    <-- Messed up Microsoft duplicate, preventing python from running. Type that
