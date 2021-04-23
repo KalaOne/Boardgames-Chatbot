@@ -25,10 +25,13 @@ ToDo:
     Styling:
         - Reflective background for different games. 
 
-
     Ideas:
     - Find a way to add game codes in the DB for each game => That returns https://www.boardgamegeek.com/boardgame/?/GAME_NAME. Use it to add games. ? = int.
     
+    Testing:
+        - DB returns correct answers
+        - Scraping?
+        - Conversation flow 
    
 Complete:
 + Pull lots of game names into the DB
