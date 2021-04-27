@@ -193,9 +193,10 @@ class ReasoningEngine(KnowledgeEngine):
             self.update_message_chain(message, response_required=False, priority="high")
             self.modify(f1, action="game_selected")
         elif game_in_db == False:
-            message = "Sorry, it seems like {} doesn't exist in the database. \
-                The closest game I found is {}.".format(message_text, closest_match).capitalize()
-            self.update_message_chain(message, priority="high")
+            print("Game not found!!!")
+            message = "Sorry, it seems like '{}' doesn't exist in the database. \
+                The closest game I found is '{}'.".format(message_text.capitalize(), closest_match[1].capitalize())
+            self.update_message_chain(message, priority="high", response_required=False)
             self.modify(f1, action="game_not_found")
 
     @Rule(AS.f1 << Fact(action="game_selected"),
@@ -209,7 +210,7 @@ class ReasoningEngine(KnowledgeEngine):
         salience=96)
     def game_not_found(self):
         print("game not found facts", self.facts)
-        self.update_message_chain("Fact:Game not found. Awwww, I'll cry ;( ")
+        self.update_message_chain("Fact:Game not found. Awwww, I'll cry ;( ", priority="low")
 
     @Rule(AS.f1 << Fact(action="random"),
           Fact(message_text=MATCH.message_text),
