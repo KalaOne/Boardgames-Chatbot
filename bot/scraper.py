@@ -3,7 +3,7 @@ import re #REGEX
 from urllib.request import urlopen
 from bs4  import BeautifulSoup as soup
 import requests
-from DB import add_games_to_db, add_game_codes_to_db
+from .DB import add_game_codes_to_db
 from datetime import datetime
 
 

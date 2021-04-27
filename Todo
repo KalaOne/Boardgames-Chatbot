@@ -14,6 +14,11 @@ Go to through levels of journey : 1->2->3->4 - in 4) set a particular fact to on
 
 ToDo:
     Functionality:
+        - CREATE JOURNEY!
+            =1) Help - sort of done
+            =2) "Suggest a game to me" 
+                2.1) Here use the labels for question/response. -> Genre? Sub-Genre? Play time? Num_Players?
+            =3) "I know a game -> input a specific game name"
         - Compare name of game user has entered. Check if exists in the DB. If typo, suggest it to the user.
         - Add more functionality - different functions actions, utilise the data more - Reviews
 

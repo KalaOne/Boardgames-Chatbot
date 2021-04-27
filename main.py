@@ -23,9 +23,9 @@ def receive_user_input():
 
     if message_input == "":
         this_chat = Chat()
-        response = "Greetings user! I can give you information for a few board games (for now). \
-                Specify a game and continue with your questions. If you want to know the \
-                supported list of games, type 'help'."
+        response = "Greetings user! I can give you specific information about a board game of your interest \
+                or help you find a suitable game for yourself. \
+                Specify a game and continue with your questions. If you want to know I can do, type 'help'."
         this_chat.add_message("bot", response)
         response_required = True
     elif "BOTRESPONSE" in message_input:

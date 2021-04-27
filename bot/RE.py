@@ -2,7 +2,7 @@ from experta import *
 import spacy
 from spacy.matcher import Matcher, PhraseMatcher
 from .scraper import scrape
-from .DB import connect_db
+from .DB import connect_db, get_data_from_db_based_on_name
 import difflib
 
 MultiTokenDictionary = {
@@ -28,6 +28,13 @@ MultiTokenDictionary = {
         [{"LEMMA": "help"}],
         [{"LEMMA": "assistance"}]
 
+    ],
+
+    "suggest_game" : [
+        [{"POS": "VERB", "LEMMA" : "suggest"}], # suggest
+        [{"POS": "VERB", "LEMMA" : "suggest"}, {"POS": "DET", "OP":"*"}, 
+            {"POS": "NOUN", "LEMMA" : "game"}], # suggest (a) game
+
     ]
 
                 
@@ -49,17 +56,17 @@ class ReasoningEngine(KnowledgeEngine):
                                 'response_required': True}
         self.message = []
         self.tags = ""
-        self.games_list = connect_db()
+        self.game_data = None
         self.boardgame = ""
 
 
     def game_name_similarity(self, game_name):
         result = None
-        for game in self.games_list:
-            seq = difflib.SequenceMatcher(lambda x: x in " \t", game_name, game)
-            r = seq.ratio()*100
-            if r > 70:
-                result = game
+        # for game in self.games_list:
+        #     seq = difflib.SequenceMatcher(lambda x: x in " \t", game_name, game)
+        #     r = seq.ratio()*100
+        #     if r > 70:
+        #         result = game
         
         return result
 
@@ -146,43 +153,49 @@ class ReasoningEngine(KnowledgeEngine):
         matches = self.get_multiple_matches(doc, MultiTokenDictionary['help'])
         game_in_db = None
         first_message = True
-        
+
+        # for token in doc:
+        #     print(token.text, token.pos_, token.dep_, token.lemma_)
+
+
         # User written 'help'
         if len(matches) > 0:
-            print("HELP")
             first_message = False
             self.update_message_chain("Here is a list of games I can help with.", response_required=False)
-            list_of_games = '''<div class="list-games"><ul>'''
-            for game, rating in self.games_list:
-                list_of_games += '''<li> {} </li> '''.format(game)
-            list_of_games += '''</ul></div>'''
-            self.update_message_chain(list_of_games, priority="low", response_required=False)
+                    # list_of_games = '''<div class="list-games"><ul>'''
+                    # for game, rating in self.games_list:
+                    #     list_of_games += '''<li> {} </li> '''.format(game)
+                    # list_of_games += '''</ul></div>'''
+                    # self.update_message_chain(list_of_games, priority="low", response_required=False)
             self.update_message_chain("Which game are you interested in?", priority="low")
             # self.modify(f1, action="help")
             self.halt()
         else:
-            # user typed a particular game name
-            for game, rating in self.games_list:
-# print("Comparison: ", game.lower(), message_text)
-                if game.lower() == message_text.lower():
-                    print("Game within Database")
+            # user wants game suggestion
+            matches = self.get_multiple_matches(doc, MultiTokenDictionary['suggest_game'])
+            if len(matches) > 0:
+                self.update_message_chain("Suggest_game: Okay, I need some details so I know what to suggest", priority="low", response_required=False)
+                self.update_message_chain("Let's start with 'Do you know what genre you are interested in?'", priority="high")
+            else:
+                # user has written specific game name
+                game, closest_match = get_data_from_db_based_on_name(message_text)
+                # print("GAME SELECTED ", game)
+                if game:
                     game_in_db = True
-                    break
-                else:
-                    print("Can't find the game asked for. :(")
-                    if not first_message:
-                        game_in_db = False
+                else: 
+                    game_in_db = False
                     
         print("Game found?", game_in_db)
         # self.modify(f1, action="random")
         if game_in_db == True:
-            message = "Selected game: {}".format(message_text)
+            message = "Selected game: {}, also known as {}".format(game[0][0], game[0][1])
             self.boardgame = message_text
             self.update_message_chain(message, response_required=False, priority="high")
             self.modify(f1, action="game_selected")
         elif game_in_db == False:
-            message = "Sorry, currently I don't support {}. For a list of supported games, type 'help'.".format(message_text).capitalize()
-            self.update_message_chain(message)
+            message = "Sorry, it seems like {} doesn't exist in the database. \
+                The closest game I found is {}.".format(message_text, closest_match).capitalize()
+            self.update_message_chain(message, priority="high")
             self.modify(f1, action="game_not_found")
 
     @Rule(AS.f1 << Fact(action="game_selected"),
@@ -205,9 +218,10 @@ class ReasoningEngine(KnowledgeEngine):
         """
 
         """
-        print("FACTS:", self.knowledge)
+        # print("FACTS:", self.knowledge)
         doc = self.process_nlp(message_text)
         # print out what the tokens are in the user input
+        # print("HEEEEERRRRREEEEEE")
         # for token in doc:
         #     print(token.text, token.pos_, token.dep_, token.lemma_)
         print("message from user", message_text)
