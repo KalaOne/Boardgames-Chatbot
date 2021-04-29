@@ -6,6 +6,9 @@ from .DB import connect_db, get_data_from_db_based_on_name
 import difflib
 
 MultiTokenDictionary = {
+    "yes": [{"LOWER": {"IN": ["yes", "yeah", "y", "yep", "yeh", "ye"]}}],
+    "no": [{"LOWER": {"IN": ["no", "nope", "n", "nah", "na"]}}],
+
     "game_info" : [
         [{"POS": "PRON"}, {"POS": "AUX"}, {"POS": "DET"}, {"POS":"NOUN"}, {"POS": "ADP"}], # "What is the game about"
         [{"POS": "ADP"}, {"POS": "DET", "OP": "*"}, {"POS": "NOUN"}], # "About the game"
@@ -161,21 +164,18 @@ class ReasoningEngine(KnowledgeEngine):
         # User written 'help'
         if len(matches) > 0:
             first_message = False
-            self.update_message_chain("Here is a list of games I can help with.", response_required=False)
-                    # list_of_games = '''<div class="list-games"><ul>'''
-                    # for game, rating in self.games_list:
-                    #     list_of_games += '''<li> {} </li> '''.format(game)
-                    # list_of_games += '''</ul></div>'''
-                    # self.update_message_chain(list_of_games, priority="low", response_required=False)
-            self.update_message_chain("Which game are you interested in?", priority="low")
+            self.update_message_chain("I have access to over 100,000 games. I can help you get specific information about a particular game or \
+                suggest a game based on your requirements.", response_required=False)
+            self.update_message_chain("What do you want me to do?", priority="low")
             # self.modify(f1, action="help")
             self.halt()
         else:
             # user wants game suggestion
             matches = self.get_multiple_matches(doc, MultiTokenDictionary['suggest_game'])
             if len(matches) > 0:
-                self.update_message_chain("Suggest_game: Okay, I need some details so I know what to suggest", priority="low", response_required=False)
-                self.update_message_chain("Let's start with 'Do you know what genre you are interested in?'", priority="high")
+                self.update_message_chain("Suggest_game: Okay, I need some details so I know what to suggest.", priority="high", response_required=False)
+                self.declare(Fact(suggest_game = True))
+                self.modify(f1, action="suggest_game")
             else:
                 # user has written specific game name
                 game, closest_match = get_data_from_db_based_on_name(message_text)
@@ -199,6 +199,7 @@ class ReasoningEngine(KnowledgeEngine):
             self.update_message_chain(message, priority="high", response_required=False)
             self.modify(f1, action="game_not_found")
 
+
     @Rule(AS.f1 << Fact(action="game_selected"),
         salience=95)
     def game_selected(self, f1):
@@ -211,6 +212,15 @@ class ReasoningEngine(KnowledgeEngine):
     def game_not_found(self):
         print("game not found facts", self.facts)
         self.update_message_chain("Fact:Game not found. Awwww, I'll cry ;( ", priority="low")
+
+    @Rule(Fact(action="suggest_game"),
+        Fact(suggest_game = True),
+        salience = 98)
+    def suggest_game(self):
+        msg = "{}Let's start with 'Do you know what genre you are interested in?'"
+        msg_tag = "{REQ:" + "Choice}"
+        self.update_message_chain(msg.format(msg_tag), priority="low")
+        
 
     @Rule(AS.f1 << Fact(action="random"),
           Fact(message_text=MATCH.message_text),
@@ -289,3 +299,15 @@ class ReasoningEngine(KnowledgeEngine):
     def get_more_info(self):
         self.update_message_chain("Ah.... What now...?", priority="high")
     
+
+    def check_yes_no(self, doc, message_text, tags):
+        print("Check if know Genre")
+        if "{TAG:Yes/No}" in message_text:
+            choice = self.get_multiple_matches(doc, MultiTokenDictionary['yes'])
+            if choice is None:
+                choice = self.get_multiple_matches(doc, MultiTokenDictionary['no'])
+        
+        if choice is not None:
+            return choice
+            
+

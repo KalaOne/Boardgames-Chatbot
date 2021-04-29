@@ -1,4 +1,9 @@
 
+let tag_map = {
+    "choice": "{TAG:Yes/No}",
+    
+}
+
 // Document.ready
 $(function () {
 
@@ -69,7 +74,6 @@ function sendMessage(text, first = false) {
         datatype: "json",
         data: {"message_input" : user_input},
         success: function(output){
-            console.log("receiving something? " + output.message)
             msg.text = output.message;
             msg.response_required = output.response_required;
             if (output.message) {
@@ -77,8 +81,9 @@ function sendMessage(text, first = false) {
                     msg.write();    
                 }, 500);
             }
+            console.log("Message received with tag: "+output.message);
+            getControlTags(output.message);
             if(output.response_required === false){
-                console.log("HEY BOT");
                 makeAjaxCall("BOTRESPONSE");
             }
             scrollToBottom();
@@ -116,3 +121,20 @@ function Message(arg) {
     }(this);
     return this;
 };
+
+function getControlTags(messageText){
+    // Handles tags in the message, where user needs to response for specific question.
+    let regex = new RegExp('{([^}]+)}', 'g');
+    let results = [...messageText.matchAll(regex)]
+    results.forEach(function(element){
+        let tagArr = element[1].split(":");
+        let tag = tagArr[0], value = tagArr[1];
+        switch (tag){
+            case 'REQ':
+                tag_message += tag_map[value];
+                break;
+            default:
+                break;
+        }
+    });
+}
