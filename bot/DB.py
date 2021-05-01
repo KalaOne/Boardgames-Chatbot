@@ -6,7 +6,8 @@ import csv
 import numpy as np
 from fuzzywuzzy import fuzz
 import re
-
+import math
+from difflib import SequenceMatcher
 
 
 conn = psycopg2.connect(host='localhost', port=5433, user='postgres', password='postgres')
@@ -72,20 +73,22 @@ def get_similar_names_from_db(game_name):
         all_names = cur.fetchall()
     except psycopg2.DatabaseError as e:
         print(e)
-
-    # start = datetime.now()
-    # s_time = start.strftime("%H:%M:%S")
-    # print("Looking for name similarities.", s_time)
-    if all_names:
-        for row in all_names:
-            for name in enumerate(row):
-                if (fuzz.ratio(name[1].lower(), game_name.lower()) > match_ratio):
-                    match_ratio = fuzz.ratio(name[1].lower(), game_name.lower())
-                    # print("Comparing {} with '{}'. Similarity ratio is : {}".format(name[1].lower(),game_name.lower(), match_ratio))
-                    closest_name_under_70 = name
-            if match_ratio >= 70:
-                closest_name = name
-                break
+    df = pd.DataFrame(all_names)
+ 
+    if not df.empty:
+        for row in df.values:
+            for i, name in enumerate(row):
+                if name != 'NaN':
+                    if (fuzz.ratio(name.lower(), game_name.lower()) > match_ratio):
+                        match_ratio = fuzz.ratio(name.lower(), game_name.lower())
+                        closest_name_under_70 = name
+                    # if (SequenceMatcher(lambda x: x == " ", name.lower(), game_name.lower()).ratio() > match_ratio):
+                    #     match_ratio = SequenceMatcher(lambda x: x == " ", name.lower(), game_name.lower()).ratio()
+                else:
+                    continue
+                if match_ratio >= 85:
+                    closest_name = [i, name]
+                    break
     else:
         print("No game found in DB.")
     cur.close()       
@@ -119,7 +122,7 @@ def get_data_from_db_based_on_name(game_name):
 
     return game_data, close_game
 
-# close, close_under_70 = get_data_from_db_based_on_name("asdf")
+# close, close_under_70 = get_data_from_db_based_on_name("sythe")
 # if close:
 #     print("found: ",close)
 # else:

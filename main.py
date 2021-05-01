@@ -33,16 +33,16 @@ def receive_user_input():
         response = message['message']
         response_required = message['response_required']
     else:
-        try:
-            message = this_chat.add_message("human", message_input)
-            response = message[0]
-            response_required = message[1]
-        except Exception as e:
-            print(e)
-            message = ["Exception: Sorry! There has been an issue with this chat, please "
-                        "reload the page to start a new chat", True]
-            response = message[0]
-            response_required = message[1]
+        # try:
+        message = this_chat.add_message("human", message_input)
+        response = message[0]
+        response_required = message[1]
+        # except Exception as e:
+        #     print(e)
+        #     message = ["Exception: Sorry! There has been an issue with this chat, please "
+        #                 "reload the page to start a new chat", True]
+        #     response = message[0]
+        #     response_required = message[1]
 
     return jsonify({"message" : response,
                     "response_required" : response_required})

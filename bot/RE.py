@@ -5,10 +5,12 @@ from .scraper import scrape
 from .DB import connect_db, get_data_from_db_based_on_name
 import difflib
 
-MultiTokenDictionary = {
+SingleTokenDictionary = {
     "yes": [{"LOWER": {"IN": ["yes", "yeah", "y", "yep", "yeh", "ye"]}}],
     "no": [{"LOWER": {"IN": ["no", "nope", "n", "nah", "na"]}}],
+}
 
+MultiTokenDictionary = {
     "game_info" : [
         [{"POS": "PRON"}, {"POS": "AUX"}, {"POS": "DET"}, {"POS":"NOUN"}, {"POS": "ADP"}], # "What is the game about"
         [{"POS": "ADP"}, {"POS": "DET", "OP": "*"}, {"POS": "NOUN"}], # "About the game"
@@ -35,8 +37,9 @@ MultiTokenDictionary = {
 
     "suggest_game" : [
         [{"POS": "VERB", "LEMMA" : "suggest"}], # suggest
-        [{"POS": "VERB", "LEMMA" : "suggest"}, {"POS": "DET", "OP":"*"}, 
-            {"POS": "NOUN", "LEMMA" : "game"}], # suggest (a) game
+        [{"POS": "VERB", "LEMMA" : "suggest"}, 
+        {"POS": "DET", "OP":"*"}, 
+        {"POS": "NOUN", "LEMMA" : "game"}], # suggest (a) game
 
     ]
 
@@ -110,14 +113,17 @@ class ReasoningEngine(KnowledgeEngine):
             self.tags += message
 
     def get_single_match(self, doc, pattern):
+        print("pattern:", pattern)
         matcher = Matcher(self.nlp.vocab)
         if "newMatch" in matcher:
             matcher.remove("newMatch")
         matcher.add("newMatch", None, pattern)
         matches = matcher(doc)
+        print("matches:", matches)
         try:
             if len(matches) > 0:
                 for match_id, start, end in matches:
+                    
                     return doc[start:end]
         except Exception as e:
             return e
@@ -140,17 +146,17 @@ class ReasoningEngine(KnowledgeEngine):
             this_fact = {key: value}
             yield Fact(**this_fact)
         if "action" not in self.knowledge.keys():
-            yield Fact(action="game_selection")
+            yield Fact(action="path_choice")
         if "end" not in self.knowledge.keys():
             yield Fact(end=False)
         yield Fact(extra_info_req=False)
 
 
-    @Rule(AS.f1 << Fact(action="game_selection"),
+    @Rule(AS.f1 << Fact(action="path_choice"),
         Fact(message_text=MATCH.message_text),
         salience=100)
     def game_selection(self, f1, message_text):
-        print("game_selection", message_text)
+        print("path_choice", message_text)
         print("Facts available.", self.facts)
         doc = self.process_nlp(message_text)
         matches = self.get_multiple_matches(doc, MultiTokenDictionary['help'])
@@ -204,25 +210,33 @@ class ReasoningEngine(KnowledgeEngine):
         salience=95)
     def game_selected(self, f1):
         print("game selected facts", self.facts)
-        self.update_message_chain("I can help provide general information, instructions, reviews and much more. What do you need?", priority="low")
-        self.modify(f1, action="random")
+        self.update_message_chain("I can help provide almost anything for the game - specific information, instructions or reviews. What do you need?", priority="low")
+        self.modify(f1, action="game_journey")
     
-    @Rule(Fact(action="game_not_found"),
+    @Rule(AS.f1 << Fact(action="game_not_found"),
         salience=96)
-    def game_not_found(self):
+    def game_not_found(self, f1):
         print("game not found facts", self.facts)
-        self.update_message_chain("Fact:Game not found. Awwww, I'll cry ;( ", priority="low")
+        self.update_message_chain("Please check how you spelled the game name and try again.", priority="low")
+        self.modify(f1, action="path_choice")
 
     @Rule(Fact(action="suggest_game"),
         Fact(suggest_game = True),
+        Fact(message_text=MATCH.message_text),
         salience = 98)
-    def suggest_game(self):
+    def suggest_game(self, message_text):
+        doc = self.process_nlp(message_text)
+        print("suggest_game msg_text: ", message_text)
         msg = "{}Let's start with 'Do you know what genre you are interested in?'"
         msg_tag = "{REQ:" + "Choice}"
         self.update_message_chain(msg.format(msg_tag), priority="low")
+        choice = self.check_yes_no(doc, message_text)
+
+
+
         
 
-    @Rule(AS.f1 << Fact(action="random"),
+    @Rule(AS.f1 << Fact(action="game_journey"),
           Fact(message_text=MATCH.message_text),
           salience=99)
     def direct_action(self, f1, message_text):
@@ -300,14 +314,16 @@ class ReasoningEngine(KnowledgeEngine):
         self.update_message_chain("Ah.... What now...?", priority="high")
     
 
-    def check_yes_no(self, doc, message_text, tags):
-        print("Check if know Genre")
+    def check_yes_no(self, doc, message_text):
+        choice = None
+        print("check_yes_no message_text:" , message_text)
         if "{TAG:Yes/No}" in message_text:
-            choice = self.get_multiple_matches(doc, MultiTokenDictionary['yes'])
+            choice = self.get_single_match(doc, SingleTokenDictionary['no'])
+            print("Choice yes:", choice)
             if choice is None:
-                choice = self.get_multiple_matches(doc, MultiTokenDictionary['no'])
-        
+                choice = self.get_single_match(doc, SingleTokenDictionary['yes'])
+        print("Choice end:" , choice)
         if choice is not None:
             return choice
-            
+
 
