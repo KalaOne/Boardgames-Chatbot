@@ -74,6 +74,7 @@ class ReasoningEngine(KnowledgeEngine):
         #genre ,max_players, play_time, rating,
         self.game_suggestion_journey = "gn_pl_pt_rt_"
         self.ans_g = self.ans_p = self.ans_t = self.ans_r = False
+        self.ask1 = False
 
 
     def game_name_similarity(self, game_name):
@@ -180,8 +181,8 @@ class ReasoningEngine(KnowledgeEngine):
             self.update_message_chain("I have access to over 200,000 games. I can help you get specific information about a particular game or \
                 suggest a game based on your requirements.", response_required=False)
             self.update_message_chain("What do you want me to do?", priority="low")
-            # self.modify(f1, action="help")
-            self.halt()
+            self.modify(f1, action="help")
+            # self.halt()
         else:
             # user wants game suggestion
             matches = self.get_multiple_matches(doc, MultiTokenDictionary['suggest_game'])
@@ -191,37 +192,62 @@ class ReasoningEngine(KnowledgeEngine):
                 self.modify(f1, action="suggest_game")
             else:
                 # user has written specific game name
-                game, closest_match = get_data_from_db_based_on_name(message_text)
-                # print("GAME SELECTED ", game)
+                game, closest_match = get_specific_game_from_db(message_text)
+                print("GAME SELECTED ", game)
+                print("Closest game ", closest_match)
                 if game:
-                    game_in_db = True
+                    # the specified game is in DB
+                    message = "Selected game: {}.".format(game[0][1])
+                    self.boardgame = game[0][1]
+                    self.update_message_chain(message, response_required=False, priority="high")
+                    self.modify(f1, action="game_selected")
                 else: 
-                    game_in_db = False
+                    # Game is not in DB. Suggest alternative
+                    req_yes_no = "{REQ:" + "Choice}"
+                    if not self.ask1:
+                        message = "Sorry, it seems that '{}' doesn't exist in the database. \
+                            The closest game I found is '{}'.  {}Do you want to continue with the suggested game?".format(message_text.capitalize(), closest_match[0].capitalize(), req_yes_no)
+                        self.update_message_chain(message, priority="high")
+                        self.ask1 = True
+                    choice = self.check_yes_no(message_text)
+                    if choice:
+                        if choice.text == 'yes':
+                            self.boardgame = game[0][1]
+                            self.modify(f1, action="game_selected")
+                        elif choice.text == 'no':
+                            self.update_message_chain("Okay. Then please re-type the game you're interested in.", priority="high")
+                        else:
+                            msg = "{}Please write 'yes' or 'no'. "
+                            self.update_message_chain(msg.format(req_yes_no), priority="low")
+                            self.modify(f1, action="path_choice")
+                        
+
+                    
                     
         print("Game found?", game_in_db)
         # self.modify(f1, action="random")
-        if game_in_db == True:
-            message = "Selected game: {}, also known as {}".format(game[0][0], game[0][1])
-            self.boardgame = message_text
-            self.update_message_chain(message, response_required=False, priority="high")
-            self.modify(f1, action="game_selected")
-        elif game_in_db == False:
-            print("Game not found!!!")
-            message = "Sorry, it seems like '{}' doesn't exist in the database. \
-                The closest game I found is '{}'.".format(message_text.capitalize(), closest_match[1].capitalize())
-            self.update_message_chain(message, priority="high", response_required=False)
-            self.modify(f1, action="game_not_found")
+        # if game_in_db == True:
+        #     message = "Selected game: {}.".format(game[0][1])
+        #     self.boardgame = message_text
+        #     self.update_message_chain(message, response_required=False, priority="high")
+        #     self.modify(f1, action="game_selected")
+        # elif game_in_db == False:
+        #     req_yes_no = "{REQ:" + "Choice}"
+        #     message = "Sorry, it seems like '{}' doesn't exist in the database. \
+        #         The closest game I found is '{}'.  {}Do you want to continue with the suggested game?".format(message_text.capitalize(), closest_match[0].capitalize(), req_yes_no)
+        #     self.update_message_chain(message, priority="high")
+        #     self.modify(f1, action="game_selected")
 
 
     @Rule(AS.f1 << Fact(action="game_selected"),
-        salience=95)
+        salience=98)
     def game_selected(self, f1):
         print("game selected facts", self.facts)
-        self.update_message_chain("I can help provide almost anything for the game - specific information, instructions or reviews. What do you need?", priority="low")
+        self.update_message_chain("I can help provide almost anything for {} - specific information, instructions or reviews. What do you need?".format(self.boardgame.capitalize()), priority="low")
         self.modify(f1, action="game_journey")
     
     @Rule(AS.f1 << Fact(action="game_not_found"),
-        salience=96)
+        salience=98)
     def game_not_found(self, f1):
         print("game not found facts", self.facts)
         self.update_message_chain("Please check how you spelled the game name and try again.", priority="low")
@@ -233,27 +259,25 @@ class ReasoningEngine(KnowledgeEngine):
         salience = 98)
     def suggest_game(self, message_text):
         doc = self.process_nlp(message_text)
+        #genre ,max_players, play_time, rating,
+        # self.game_suggestion_journey = "gn_pl_pt_rt_"
         if 'gn_' in self.game_suggestion_journey:
+            req_yes_no = "{REQ:" + "Choice}"
             if not self.ans_g:
                 msg = "{}Let's start with 'Do you know what genre you are interested in?'"
-                req_yes_no = "{REQ:" + "Choice}"
                 self.update_message_chain(msg.format(req_yes_no), priority="low")
             choice = self.check_yes_no(message_text)
             if choice:
-                print("choice exists")
                 if choice.text == 'yes':
-                    print("choice text yes")
                     self.update_message_chain("Cool! You can specify up to three genres. Separate them by comma (',').", priority="high")
                     self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', '')
                 elif choice.text == 'no':
-                    print("choice text no")
                     self.update_message_chain("Alright, what about maximum number of players?", priority="high")
                     self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', 'gn')
             else:
-                print("neither yes or no")
                 msg = "{}Please write 'yes' or 'no'. "
                 self.update_message_chain(msg.format(req_yes_no), priority="low")
-
+        
 
 
 
