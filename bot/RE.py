@@ -2,15 +2,21 @@ from experta import *
 import spacy
 from spacy.matcher import Matcher, PhraseMatcher
 from .scraper import scrape
-from .DB import connect_db, get_data_from_db_based_on_name
+from .DB import connect_db, get_specific_game_from_db
 import difflib
 
-SingleTokenDictionary = {
-    "yes": [{"LOWER": {"IN": ["yes", "yeah", "y", "yep", "yeh", "ye"]}}],
-    "no": [{"LOWER": {"IN": ["no", "nope", "n", "nah", "na"]}}],
-}
+
 
 MultiTokenDictionary = {
+    "yes": [
+        [{"LOWER": {"IN": ["yes", "yeah"]}}],
+        [{"LOWER": {"IN": ["y", "yep", "yeh", "ye"]}}]
+        ],
+    "no": [
+        [{"LOWER": {"IN": ["no", "n"]}}],
+        [{"LOWER": {"IN": ["nope", "nah", "na"]}}]
+        ],
+
     "game_info" : [
         [{"POS": "PRON"}, {"POS": "AUX"}, {"POS": "DET"}, {"POS":"NOUN"}, {"POS": "ADP"}], # "What is the game about"
         [{"POS": "ADP"}, {"POS": "DET", "OP": "*"}, {"POS": "NOUN"}], # "About the game"
@@ -42,9 +48,10 @@ MultiTokenDictionary = {
         {"POS": "NOUN", "LEMMA" : "game"}], # suggest (a) game
 
     ]
-
                 
 }
+
+
 
 class ReasoningEngine(KnowledgeEngine):
 
@@ -64,6 +71,9 @@ class ReasoningEngine(KnowledgeEngine):
         self.tags = ""
         self.game_data = None
         self.boardgame = ""
+        #genre ,max_players, play_time, rating,
+        self.game_suggestion_journey = "gn_pl_pt_rt_"
+        self.ans_g = self.ans_p = self.ans_t = self.ans_r = False
 
 
     def game_name_similarity(self, game_name):
@@ -113,17 +123,14 @@ class ReasoningEngine(KnowledgeEngine):
             self.tags += message
 
     def get_single_match(self, doc, pattern):
-        print("pattern:", pattern)
         matcher = Matcher(self.nlp.vocab)
         if "newMatch" in matcher:
             matcher.remove("newMatch")
         matcher.add("newMatch", None, pattern)
         matches = matcher(doc)
-        print("matches:", matches)
         try:
             if len(matches) > 0:
                 for match_id, start, end in matches:
-                    
                     return doc[start:end]
         except Exception as e:
             return e
@@ -170,7 +177,7 @@ class ReasoningEngine(KnowledgeEngine):
         # User written 'help'
         if len(matches) > 0:
             first_message = False
-            self.update_message_chain("I have access to over 100,000 games. I can help you get specific information about a particular game or \
+            self.update_message_chain("I have access to over 200,000 games. I can help you get specific information about a particular game or \
                 suggest a game based on your requirements.", response_required=False)
             self.update_message_chain("What do you want me to do?", priority="low")
             # self.modify(f1, action="help")
@@ -226,11 +233,28 @@ class ReasoningEngine(KnowledgeEngine):
         salience = 98)
     def suggest_game(self, message_text):
         doc = self.process_nlp(message_text)
-        print("suggest_game msg_text: ", message_text)
-        msg = "{}Let's start with 'Do you know what genre you are interested in?'"
-        msg_tag = "{REQ:" + "Choice}"
-        self.update_message_chain(msg.format(msg_tag), priority="low")
-        choice = self.check_yes_no(doc, message_text)
+        if 'gn_' in self.game_suggestion_journey:
+            if not self.ans_g:
+                msg = "{}Let's start with 'Do you know what genre you are interested in?'"
+                req_yes_no = "{REQ:" + "Choice}"
+                self.update_message_chain(msg.format(req_yes_no), priority="low")
+            choice = self.check_yes_no(message_text)
+            if choice:
+                print("choice exists")
+                if choice.text == 'yes':
+                    print("choice text yes")
+                    self.update_message_chain("Cool! You can specify up to three genres. Separate them by comma (',').", priority="high")
+                    self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', '')
+                elif choice.text == 'no':
+                    print("choice text no")
+                    self.update_message_chain("Alright, what about maximum number of players?", priority="high")
+                    self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', 'gn')
+            else:
+                print("neither yes or no")
+                msg = "{}Please write 'yes' or 'no'. "
+                self.update_message_chain(msg.format(req_yes_no), priority="low")
+
+
 
 
 
@@ -255,7 +279,6 @@ class ReasoningEngine(KnowledgeEngine):
         if len(matches) > 0:
             print("GAME INFO")
             self.update_message_chain("Game_info: Ok, let's get you informed!", response_required=False, priority="high")
-            # self.progress = "dl_dt_al_rt_rs_na_nc_"
             self.declare(Fact(general_information = True))
             self.modify(f1, action="information")
         else:
@@ -314,16 +337,21 @@ class ReasoningEngine(KnowledgeEngine):
         self.update_message_chain("Ah.... What now...?", priority="high")
     
 
-    def check_yes_no(self, doc, message_text):
+    def check_yes_no(self, message_text):
         choice = None
-        print("check_yes_no message_text:" , message_text)
+        doc = self.process_nlp(message_text.split(" ")[-1])
         if "{TAG:Yes/No}" in message_text:
-            choice = self.get_single_match(doc, SingleTokenDictionary['no'])
-            print("Choice yes:", choice)
-            if choice is None:
-                choice = self.get_single_match(doc, SingleTokenDictionary['yes'])
-        print("Choice end:" , choice)
+            choice = self.get_multiple_matches(doc, MultiTokenDictionary['yes'])
+            if (choice is None) or (type(choice) == str and (choice == '')):
+                choice = self.get_multiple_matches(doc, MultiTokenDictionary['no'])
+            elif (choice is None) or choice.text == '':
+                choice = self.get_multiple_matches(doc, MultiTokenDictionary['no'])
+        print("check_yes_no doc:", doc)
+        print("^ choice: ", choice)
         if choice is not None:
             return choice
 
 
+# r = ReasoningEngine()
+# doc = r.process_nlp("{TAG:Yes/No} no")
+# r.check_yes_no(doc, "{TAG:Yes/No} no")

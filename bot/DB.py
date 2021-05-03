@@ -24,7 +24,7 @@ def connect_db():
     return games_list
 
 
-def add_game_codes_to_db():
+def add_games_to_db():
     #
     # Uses BGG_data file to add it all into the DB
     #
@@ -35,12 +35,12 @@ def add_game_codes_to_db():
 
     cur = conn.cursor()
 
-    df = pd.read_csv('E:/trimmedData.csv', lineterminator='\n', error_bad_lines=False)
+    df = pd.read_csv('E:/basic_data.csv', lineterminator='\n', error_bad_lines=False)
 
     df_col = list(df)
     columns = ",".join(df_col)
     values = "VALUES({})".format(",".join(["%s" for _ in df_col]))
-    insert = "INSERT INTO bgg_data ({}) {}".format(columns,values)
+    insert = "INSERT INTO big_bgg_data ({}) {}".format(columns,values)
     try:
         psycopg2.extras.execute_batch(cur, insert, df.values)
     except psycopg2.DatabaseError as e:
@@ -122,8 +122,65 @@ def get_data_from_db_based_on_name(game_name):
 
     return game_data, close_game
 
-# close, close_under_70 = get_data_from_db_based_on_name("sythe")
+
+def get_similar_name(game_name):
+    closest_name = None
+    closest_name_under_70 = None
+    cur = conn.cursor()
+    match_ratio = 0
+
+    try:
+        all_names_query = "SELECT name FROM big_bgg_data"
+        cur.execute(all_names_query)
+        all_names = cur.fetchall()
+    except psycopg2.DatabaseError as e:
+        print(e)
+    # df = pd.DataFrame(all_names)
+
+    if all_names:
+        for name in all_names:
+            if (fuzz.ratio(name[0].lower(), game_name.lower()) > match_ratio):
+                match_ratio = fuzz.ratio(name[0].lower(), game_name.lower())
+                closest_name_under_70 = name
+            # if (SequenceMatcher(lambda x: x == " ", name.lower(), game_name.lower()).ratio() > match_ratio):
+            #     match_ratio = SequenceMatcher(lambda x: x == " ", name.lower(), game_name.lower()).ratio()
+            else:
+                continue
+            if match_ratio >= 85:
+                closest_name = name
+                break
+    else:
+        print("No game found in DB.")
+    cur.close()       
+    return closest_name, closest_name_under_70
+
+def get_specific_game_from_db(game_name):
+    the_game, close_game = get_similar_name(game_name)
+    game_data = None
+    cur = conn.cursor()
+    if the_game:
+        try:
+            row_data_query = "SELECT * FROM big_bgg_data WHERE name = '{}'".format(the_game[0])
+            cur.execute(row_data_query)
+            game_data = cur.fetchall()
+        except psycopg2.DatabaseError as e:
+            print(e)
+            return e
+    else:
+        return the_game, close_game
+
+    # clean_description = re.sub('<[^<]+?>', '', game_data[0][2])
+    # print(clean_description)
+
+    cur.close()
+
+    return game_data, close_game
+
+
+
+# close, close_under_70 = get_specific_game_from_db("sythe")
 # if close:
 #     print("found: ",close)
 # else:
 #     print("not found.", close_under_70)
+
