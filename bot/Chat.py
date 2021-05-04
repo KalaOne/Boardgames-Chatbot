@@ -16,7 +16,6 @@ class Chat():
             message = self.chat_engine.message.pop(0)
             tags = self.chat_engine.tags
             self.chat_engine.tags = ""
-
             return [message['message'],
                     message['response_required']]
 
@@ -27,4 +26,6 @@ class Chat():
             message = { 'message' : "Chat: Sorry! Something has gone wrong with this chat. "
                            "Please reload the page",
                         'response_required' : True }
+        tags = self.chat_engine.tags
+        self.chat_engine.tags = ""
         return message

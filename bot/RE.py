@@ -2,10 +2,21 @@ from experta import *
 import spacy
 from spacy.matcher import Matcher, PhraseMatcher
 from .scraper import scrape
-from .DB import connect_db
+from .DB import connect_db, get_specific_game_from_db
 import difflib
 
+
+
 MultiTokenDictionary = {
+    "yes": [
+        [{"LOWER": {"IN": ["yes", "yeah"]}}],
+        [{"LOWER": {"IN": ["y", "yep", "yeh", "ye"]}}]
+        ],
+    "no": [
+        [{"LOWER": {"IN": ["no", "n"]}}],
+        [{"LOWER": {"IN": ["nope", "nah", "na"]}}]
+        ],
+
     "game_info" : [
         [{"POS": "PRON"}, {"POS": "AUX"}, {"POS": "DET"}, {"POS":"NOUN"}, {"POS": "ADP"}], # "What is the game about"
         [{"POS": "ADP"}, {"POS": "DET", "OP": "*"}, {"POS": "NOUN"}], # "About the game"
@@ -28,10 +39,19 @@ MultiTokenDictionary = {
         [{"LEMMA": "help"}],
         [{"LEMMA": "assistance"}]
 
-    ]
+    ],
 
+    "suggest_game" : [
+        [{"POS": "VERB", "LEMMA" : "suggest"}], # suggest
+        [{"POS": "VERB", "LEMMA" : "suggest"}, 
+        {"POS": "DET", "OP":"*"}, 
+        {"POS": "NOUN", "LEMMA" : "game"}], # suggest (a) game
+
+    ]
                 
 }
+
+
 
 class ReasoningEngine(KnowledgeEngine):
 
@@ -49,17 +69,21 @@ class ReasoningEngine(KnowledgeEngine):
                                 'response_required': True}
         self.message = []
         self.tags = ""
-        self.games_list = connect_db()
+        self.game_data = None
         self.boardgame = ""
+        #genre ,max_players, play_time, rating,
+        self.game_suggestion_journey = "gn_pl_pt_rt_"
+        self.ans_g = self.ans_p = self.ans_t = self.ans_r = False
+        self.ask1 = False
 
 
     def game_name_similarity(self, game_name):
         result = None
-        for game in self.games_list:
-            seq = difflib.SequenceMatcher(lambda x: x in " \t", game_name, game)
-            r = seq.ratio()*100
-            if r > 70:
-                result = game
+        # for game in self.games_list:
+        #     seq = difflib.SequenceMatcher(lambda x: x in " \t", game_name, game)
+        #     r = seq.ratio()*100
+        #     if r > 70:
+        #         result = game
         
         return result
 
@@ -130,84 +154,148 @@ class ReasoningEngine(KnowledgeEngine):
             this_fact = {key: value}
             yield Fact(**this_fact)
         if "action" not in self.knowledge.keys():
-            yield Fact(action="game_selection")
+            yield Fact(action="path_choice")
         if "end" not in self.knowledge.keys():
             yield Fact(end=False)
         yield Fact(extra_info_req=False)
 
 
-    @Rule(AS.f1 << Fact(action="game_selection"),
+    @Rule(AS.f1 << Fact(action="path_choice"),
         Fact(message_text=MATCH.message_text),
         salience=100)
     def game_selection(self, f1, message_text):
-        print("game_selection", message_text)
+        print("path_choice", message_text)
         print("Facts available.", self.facts)
         doc = self.process_nlp(message_text)
         matches = self.get_multiple_matches(doc, MultiTokenDictionary['help'])
         game_in_db = None
         first_message = True
-        
+
+        # for token in doc:
+        #     print(token.text, token.pos_, token.dep_, token.lemma_)
+
+
         # User written 'help'
         if len(matches) > 0:
-            print("HELP")
             first_message = False
-            self.update_message_chain("Here is a list of games I can help with.", response_required=False)
-            list_of_games = '''<div class="list-games"><ul>'''
-            for game, rating in self.games_list:
-                list_of_games += '''<li> {} </li> '''.format(game)
-            list_of_games += '''</ul></div>'''
-            self.update_message_chain(list_of_games, priority="low", response_required=False)
-            self.update_message_chain("Which game are you interested in?", priority="low")
+            self.update_message_chain("I have access to over 200,000 games. I can help you get specific information about a particular game or \
+                suggest a game based on your requirements.", response_required=False)
+            self.update_message_chain("What do you want me to do?", priority="low")
             # self.modify(f1, action="help")
-            self.halt()
+            # self.halt()
         else:
-            # user typed a particular game name
-            for game, rating in self.games_list:
-# print("Comparison: ", game.lower(), message_text)
-                if game.lower() == message_text.lower():
-                    print("Game within Database")
-                    game_in_db = True
-                    break
-                else:
-                    print("Can't find the game asked for. :(")
-                    if not first_message:
-                        game_in_db = False
+            # user wants game suggestion
+            matches = self.get_multiple_matches(doc, MultiTokenDictionary['suggest_game'])
+            if len(matches) > 0:
+                self.update_message_chain("Suggest_game: Okay, I need some details so I know what to suggest.", priority="high", response_required=False)
+                self.declare(Fact(suggest_game = True))
+                self.modify(f1, action="suggest_game")
+            else:
+                # user has written specific game name
+                game, closest_match = get_specific_game_from_db(message_text)
+                print("GAME SELECTED ", game)
+                print("Closest game ", closest_match)
+                if game:
+                    # the specified game is in DB
+                    message = "Selected game: {}.".format(game[0][1])
+                    self.boardgame = game[0][1]
+                    self.update_message_chain(message, response_required=False, priority="high")
+                    self.modify(f1, action="game_selected")
+                else: 
+                    # Game is not in DB. Suggest alternative
+                    req_yes_no = "{REQ:" + "Choice}"
+                    if not self.ask1:
+                        message = "Sorry, it seems that <b>'{}'</b> doesn't exist in the database. \
+                            The closest game I found is <b>'{}'</b>.  <br>{}Do you want to continue with the suggested game?".format(message_text.capitalize(), closest_match[0].capitalize(), req_yes_no)
+                        self.boardgame = closest_match[0]
+                        self.update_message_chain(message, priority="high")
+                        self.ask1 = True
+                    choice = self.check_yes_no(message_text)
+                    if choice:
+                        if choice.text == 'yes':
+                            self.modify(f1, action="game_selected")
+                        elif choice.text == 'no':
+                            self.update_message_chain("Okay. Then please re-type the game you're interested in.", priority="high")
+                            self.ask1 = False
+                        else:
+                            msg = "{}Please write 'yes' or 'no'. "
+                            self.update_message_chain(msg.format(req_yes_no), priority="low")
+                            self.modify(f1, action="path_choice")
+                        
+
+                    
                     
         print("Game found?", game_in_db)
         # self.modify(f1, action="random")
-        if game_in_db == True:
-            message = "Selected game: {}".format(message_text)
-            self.boardgame = message_text
-            self.update_message_chain(message, response_required=False, priority="high")
-            self.modify(f1, action="game_selected")
-        elif game_in_db == False:
-            message = "Sorry, currently I don't support {}. For a list of supported games, type 'help'.".format(message_text).capitalize()
-            self.update_message_chain(message)
-            self.modify(f1, action="game_not_found")
+        # if game_in_db == True:
+        #     message = "Selected game: {}.".format(game[0][1])
+        #     self.boardgame = message_text
+        #     self.update_message_chain(message, response_required=False, priority="high")
+        #     self.modify(f1, action="game_selected")
+        # elif game_in_db == False:
+        #     req_yes_no = "{REQ:" + "Choice}"
+        #     message = "Sorry, it seems like '{}' doesn't exist in the database. \
+        #         The closest game I found is '{}'.  {}Do you want to continue with the suggested game?".format(message_text.capitalize(), closest_match[0].capitalize(), req_yes_no)
+        #     self.update_message_chain(message, priority="high")
+        #     self.modify(f1, action="game_selected")
+
 
     @Rule(AS.f1 << Fact(action="game_selected"),
-        salience=95)
+        salience=98)
     def game_selected(self, f1):
         print("game selected facts", self.facts)
-        self.update_message_chain("I can help provide general information, instructions, reviews and much more. What do you need?", priority="low")
-        self.modify(f1, action="random")
+        self.update_message_chain("I can help provide almost anything for <b>{}</b> - specific information, instructions or reviews. What do you need?".format(self.boardgame.capitalize()), priority="low")
+        self.modify(f1, action="game_journey")
     
-    @Rule(Fact(action="game_not_found"),
-        salience=96)
-    def game_not_found(self):
+    @Rule(AS.f1 << Fact(action="game_not_found"),
+        salience=98)
+    def game_not_found(self, f1):
         print("game not found facts", self.facts)
-        self.update_message_chain("Fact:Game not found. Awwww, I'll cry ;( ")
+        self.update_message_chain("Please check how you spelled the game name and try again.", priority="low")
+        self.modify(f1, action="path_choice")
 
-    @Rule(AS.f1 << Fact(action="random"),
+    @Rule(Fact(action="suggest_game"),
+        Fact(suggest_game = True),
+        Fact(message_text=MATCH.message_text),
+        salience = 98)
+    def suggest_game(self, message_text):
+        doc = self.process_nlp(message_text)
+        #genre ,max_players, play_time, rating,
+        # self.game_suggestion_journey = "gn_pl_pt_rt_"
+        if 'gn_' in self.game_suggestion_journey:
+            req_yes_no = "{REQ:" + "Choice}"
+            if not self.ans_g:
+                msg = "{}Let's start with 'Do you know what genre you are interested in?'"
+                self.update_message_chain(msg.format(req_yes_no), priority="low")
+            choice = self.check_yes_no(message_text)
+            if choice:
+                if choice.text == 'yes':
+                    self.update_message_chain("Cool! You can specify up to three genres. Separate them by comma (',').", priority="high")
+                    self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', '')
+                elif choice.text == 'no':
+                    self.update_message_chain("Alright, what about maximum number of players?", priority="high")
+                    self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', 'gn')
+            else:
+                msg = "{}Please write 'yes' or 'no'. "
+                self.update_message_chain(msg.format(req_yes_no), priority="low")
+        
+
+
+
+
+        
+
+    @Rule(AS.f1 << Fact(action="game_journey"),
           Fact(message_text=MATCH.message_text),
           salience=99)
     def direct_action(self, f1, message_text):
         """
 
         """
-        print("FACTS:", self.knowledge)
+        # print("FACTS:", self.knowledge)
         doc = self.process_nlp(message_text)
         # print out what the tokens are in the user input
+        # print("HEEEEERRRRREEEEEE")
         # for token in doc:
         #     print(token.text, token.pos_, token.dep_, token.lemma_)
         print("message from user", message_text)
@@ -216,7 +304,6 @@ class ReasoningEngine(KnowledgeEngine):
         if len(matches) > 0:
             print("GAME INFO")
             self.update_message_chain("Game_info: Ok, let's get you informed!", response_required=False, priority="high")
-            # self.progress = "dl_dt_al_rt_rs_na_nc_"
             self.declare(Fact(general_information = True))
             self.modify(f1, action="information")
         else:
@@ -274,3 +361,20 @@ class ReasoningEngine(KnowledgeEngine):
     def get_more_info(self):
         self.update_message_chain("Ah.... What now...?", priority="high")
     
+
+    def check_yes_no(self, message_text):
+        choice = None
+        doc = self.process_nlp(message_text.split(" ")[-1])
+        if "{TAG:Yes/No}" in message_text:
+            choice = self.get_multiple_matches(doc, MultiTokenDictionary['yes'])
+            if (choice is None) or (type(choice) == str and (choice == '')):
+                choice = self.get_multiple_matches(doc, MultiTokenDictionary['no'])
+            elif (choice is None) or choice.text == '':
+                choice = self.get_multiple_matches(doc, MultiTokenDictionary['no'])
+        if choice is not None:
+            return choice
+
+
+# r = ReasoningEngine()
+# doc = r.process_nlp("{TAG:Yes/No} no")
+# r.check_yes_no(doc, "{TAG:Yes/No} no")

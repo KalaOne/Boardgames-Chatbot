@@ -12,8 +12,36 @@ Bugs [sorted?]:
 Go to through levels of journey : 1->2->3->4 - in 4) set a particular fact to one needed in 3) and 3) should handle it from there.
 
 
+
+
+
+LAST PLACE LEFT OFF>>>
+    Journey for 'help'
+
+NEXT:
+        
+Next:
+        
+
+
+
 ToDo:
     Functionality:
+        - CREATE JOURNEY!
+            =1) Help -[Y]
+            =2) "Suggest a game to me" 
+                2.1) Here use the labels for question/response. -> Genre? Sub-Genre? Play time? Num_Players?
+                2.2) Whole journey -> 
+                    0) FIRST ASK USER IF THEY HAVE SPECIFIC THING THEY LOOK FOR(expansion or something? --Confusing I know =(  )
+                        A) Write exactly what they're looking for 
+                    1) General suggestion
+                        B) Have Genre; Have Play Time; Have Max Players; Have rating -> Suggest game with That
+                        C) Don't know some of the above. Try to get different information?
+                    
+                     
+
+            =3) "I know a game -> input a specific game name" -> continue with the journey.
+
         - Compare name of game user has entered. Check if exists in the DB. If typo, suggest it to the user.
         - Add more functionality - different functions actions, utilise the data more - Reviews
 

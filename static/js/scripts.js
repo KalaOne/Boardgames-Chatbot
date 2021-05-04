@@ -1,3 +1,8 @@
+let tag_message = "";
+let tag_map = {
+    "Choice": "{TAG:Yes/No}",
+    
+}
 
 // Document.ready
 $(function () {
@@ -15,16 +20,17 @@ $(function () {
 
     // openinMessage.write();
     $('#form-id').submit(function (e) {
-        console.log("Making a AJAX call");
+        // console.log("Making a AJAX call");
         e.preventDefault();
         let message = getMessageText();
-        makeAjaxCall(message);
+        makeAjaxCall(tag_message + " " + message);
         sendMessage(message);
     });
 
     $('.send_message').on("click", function () {
-        makeAjaxCall(getMessageText());
-        return sendMessage(getMessageText());
+        let message = getMessageText();
+        makeAjaxCall(tag_message + " " + message);
+        sendMessage(message);
     });
 });
 
@@ -56,12 +62,13 @@ function sendMessage(text, first = false) {
 
  // sends user input to backend for processing
  function makeAjaxCall(user_input) {
+     tag_message = "";
     // create message object to be displayed in the chat area
     var msg = new Message({
         text: '',
         message_side: 'left'
     })
-    console.log("Message received in makeAjaxCall "+ user_input);
+    // console.log("Message received in makeAjaxCall "+ user_input);
     // request to the backend
     $.ajax({
         type: 'POST',
@@ -69,16 +76,18 @@ function sendMessage(text, first = false) {
         datatype: "json",
         data: {"message_input" : user_input},
         success: function(output){
-            console.log("receiving something? " + output.message)
             msg.text = output.message;
             msg.response_required = output.response_required;
+            getControlTags(output.message);
+            console.log("output to write:" + output.message)
             if (output.message) {
                 setTimeout(() => {
-                    msg.write();    
+                    msg.write();
+                    scrollToBottom();    
                 }, 500);
             }
+            
             if(output.response_required === false){
-                console.log("HEY BOT");
                 makeAjaxCall("BOTRESPONSE");
             }
             scrollToBottom();
@@ -87,25 +96,25 @@ function sendMessage(text, first = false) {
             console.log("Unable to send data to backend! " + e)
         }
     })
-    
+    console.log("User has written: " + user_input )
 }
 
 // Takes message and displays it to "messages" area
 function Message(arg) {
-    console.log("text in Message object: " + arg.text);
+    // console.log("text in Message object: " + arg.text);
     this.text = arg.text, this.message_side = arg.message_side;
     let author;
-        
+    
     if (this.message_side === 'left') { author = "bot";}
     else { author = "human"; }
     this.write = function (_this) {
         return function () {
-            var $message;
+            let $message;
             $message = $($('.message_template').clone().html());
             if (_this.text.message) {
-                $message.addClass(_this.message_side).find('.text').html(_this.text.message);
+                $message.addClass(_this.message_side).find('.text').html(_this.text.message.replace(/\s?\{[^}]+\}/g, ''));
             } else {
-                $message.addClass(_this.message_side).find('.text').html(_this.text);
+                $message.addClass(_this.message_side).find('.text').html(_this.text.replace(/\s?\{[^}]+\}/g, ''));
             }
         
             $('.messages').append($message);
@@ -116,3 +125,20 @@ function Message(arg) {
     }(this);
     return this;
 };
+
+function getControlTags(messageText){
+    // Handles tags in the message, where user needs to response for specific question.
+    let regex = new RegExp('{([^}]+)}', 'g');
+    let results = [...messageText.matchAll(regex)]
+    results.forEach(function(element){
+        let tagArr = element[1].split(":");
+        let tag = tagArr[0], value = tagArr[1];
+        switch (tag){
+            case 'REQ':
+                tag_message += tag_map[value];
+                break;
+            default:
+                break;
+        }
+    });
+}
