@@ -181,7 +181,7 @@ class ReasoningEngine(KnowledgeEngine):
             self.update_message_chain("I have access to over 200,000 games. I can help you get specific information about a particular game or \
                 suggest a game based on your requirements.", response_required=False)
             self.update_message_chain("What do you want me to do?", priority="low")
-            self.modify(f1, action="help")
+            # self.modify(f1, action="help")
             # self.halt()
         else:
             # user wants game suggestion
@@ -205,17 +205,18 @@ class ReasoningEngine(KnowledgeEngine):
                     # Game is not in DB. Suggest alternative
                     req_yes_no = "{REQ:" + "Choice}"
                     if not self.ask1:
-                        message = "Sorry, it seems that '{}' doesn't exist in the database. \
-                            The closest game I found is '{}'.  {}Do you want to continue with the suggested game?".format(message_text.capitalize(), closest_match[0].capitalize(), req_yes_no)
+                        message = "Sorry, it seems that <b>'{}'</b> doesn't exist in the database. \
+                            The closest game I found is <b>'{}'</b>.  <br>{}Do you want to continue with the suggested game?".format(message_text.capitalize(), closest_match[0].capitalize(), req_yes_no)
+                        self.boardgame = closest_match[0]
                         self.update_message_chain(message, priority="high")
                         self.ask1 = True
                     choice = self.check_yes_no(message_text)
                     if choice:
                         if choice.text == 'yes':
-                            self.boardgame = game[0][1]
                             self.modify(f1, action="game_selected")
                         elif choice.text == 'no':
                             self.update_message_chain("Okay. Then please re-type the game you're interested in.", priority="high")
+                            self.ask1 = False
                         else:
                             msg = "{}Please write 'yes' or 'no'. "
                             self.update_message_chain(msg.format(req_yes_no), priority="low")
@@ -243,7 +244,7 @@ class ReasoningEngine(KnowledgeEngine):
         salience=98)
     def game_selected(self, f1):
         print("game selected facts", self.facts)
-        self.update_message_chain("I can help provide almost anything for {} - specific information, instructions or reviews. What do you need?".format(self.boardgame.capitalize()), priority="low")
+        self.update_message_chain("I can help provide almost anything for <b>{}</b> - specific information, instructions or reviews. What do you need?".format(self.boardgame.capitalize()), priority="low")
         self.modify(f1, action="game_journey")
     
     @Rule(AS.f1 << Fact(action="game_not_found"),
@@ -370,8 +371,6 @@ class ReasoningEngine(KnowledgeEngine):
                 choice = self.get_multiple_matches(doc, MultiTokenDictionary['no'])
             elif (choice is None) or choice.text == '':
                 choice = self.get_multiple_matches(doc, MultiTokenDictionary['no'])
-        print("check_yes_no doc:", doc)
-        print("^ choice: ", choice)
         if choice is not None:
             return choice
 

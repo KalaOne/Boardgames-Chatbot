@@ -16,13 +16,13 @@ Go to through levels of journey : 1->2->3->4 - in 4) set a particular fact to on
 
 
 LAST PLACE LEFT OFF>>>
-    Doing the journey at the start. If game is not found in the DB, suggessts another game. Check if user wants to continue with it.
+    Journey for 'help'
 
-    NEXT:
-        Problem: boardgame saved in self.boardgame is the last message written by user, not the game found.
-    Next:
-        Journey for 'help'
+NEXT:
         
+Next:
+        
+
 
 
 ToDo:

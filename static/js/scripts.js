@@ -82,7 +82,8 @@ function sendMessage(text, first = false) {
             console.log("output to write:" + output.message)
             if (output.message) {
                 setTimeout(() => {
-                    msg.write();    
+                    msg.write();
+                    scrollToBottom();    
                 }, 500);
             }
             
