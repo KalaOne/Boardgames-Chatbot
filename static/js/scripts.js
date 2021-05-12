@@ -78,6 +78,10 @@ function sendMessage(text, first = false) {
         success: function(output){
             msg.text = output.message;
             msg.response_required = output.response_required;
+            console.log("background image???: " + output.background);
+            if (output.background != false ){
+                setBackgroundImage(output.background)
+            };
             getControlTags(output.message);
             console.log("output to write:" + output.message)
             if (output.message) {
@@ -141,4 +145,8 @@ function getControlTags(messageText){
                 break;
         }
     });
+}
+
+function setBackgroundImage(imageURL) {
+    $('body').css("background", " url('"+imageURL+"') repeat").css("background-size", "450px, 450px");
 }

@@ -157,6 +157,7 @@ def get_similar_name(game_name):
 def get_specific_game_from_db(game_name):
     the_game, close_game = get_similar_name(game_name)
     game_data = None
+    close_game_data = None
     cur = conn.cursor()
     if the_game:
         try:
@@ -167,14 +168,20 @@ def get_specific_game_from_db(game_name):
             print(e)
             return e
     else:
-        return the_game, close_game
+        try:
+            row_data_query = "SELECT * FROM big_bgg_data WHERE name = '{}'".format(close_game[0])
+            cur.execute(row_data_query)
+            close_game_data = cur.fetchall()
+        except psycopg2.DatabaseError as e:
+            print(e)
+            return e
 
     # clean_description = re.sub('<[^<]+?>', '', game_data[0][2])
     # print(clean_description)
 
     cur.close()
 
-    return game_data, close_game
+    return game_data, close_game_data
 
 
 

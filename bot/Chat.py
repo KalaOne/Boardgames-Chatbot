@@ -17,7 +17,8 @@ class Chat():
             tags = self.chat_engine.tags
             self.chat_engine.tags = ""
             return [message['message'],
-                    message['response_required']]
+                    message['response_required'],
+                    message['background']]
 
     def pop_message(self):
         if len(self.chat_engine.message) > 0:
@@ -25,7 +26,8 @@ class Chat():
         else:
             message = { 'message' : "Chat: Sorry! Something has gone wrong with this chat. "
                            "Please reload the page",
-                        'response_required' : True }
+                        'response_required' : True,
+                        'background' : False }
         tags = self.chat_engine.tags
         self.chat_engine.tags = ""
         return message

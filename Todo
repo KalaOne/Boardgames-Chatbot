@@ -1,4 +1,6 @@
 Bugs [sorted?]:
+    B) [n] help -> "asdasdasd" -> yes. Doesn't accept the first "yes/no"
+    B) [n] self.boardgame doesn't get updated with correct game. 
     B) [n] 
     -----------------------
     B) [y] Information/Info not always display the initial message - "Game_inf:Ok let's get you informed"
@@ -16,13 +18,16 @@ Go to through levels of journey : 1->2->3->4 - in 4) set a particular fact to on
 
 
 LAST PLACE LEFT OFF>>>
-    Journey for 'help'
+    Problem: Help -> "asdasdasd" -> yes. Have to input "yes" twice. Investigate.
+
+Currently working on:
+    Adding css background
+    "Instructions"
+
 
 NEXT:
-        
-Next:
-        
-
+    Finish Suggest a game journey
+    Game info journey. Ask if user wants to get specific info, else display most valuable. Pull data for that game. DELIVER
 
 
 ToDo:

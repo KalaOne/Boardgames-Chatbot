@@ -66,7 +66,7 @@ class ReasoningEngine(KnowledgeEngine):
 
         # UI output
         self.default_message = {'message': "Default: I'm sorry. I don't know how to help with that just yet. Please try again",
-                                'response_required': True}
+                                'response_required': True, 'background' : False}
         self.message = []
         self.tags = ""
         self.game_data = None
@@ -75,6 +75,8 @@ class ReasoningEngine(KnowledgeEngine):
         self.game_suggestion_journey = "gn_pl_pt_rt_"
         self.ans_g = self.ans_p = self.ans_t = self.ans_r = False
         self.ask1 = False
+        self.background = False
+        self.background_image = None
 
 
     def game_name_similarity(self, game_name):
@@ -107,7 +109,7 @@ class ReasoningEngine(KnowledgeEngine):
                     self.knowledge[g] = val
         return new_fact
 
-    def update_message_chain(self, message, priority = "high", response_required = True):
+    def update_message_chain(self, message, priority = "high", response_required = True, background = False):
         """
         priority == high - first message
         priority == low - at the end of the stack.
@@ -117,9 +119,9 @@ class ReasoningEngine(KnowledgeEngine):
                 priority != 7):
             self.message = []
         if priority == "low":
-            self.message.append({'message' : message, 'response_required' : response_required})
+            self.message.append({'message' : message, 'response_required' : response_required, 'background' : background})
         elif priority == "high":
-            self.message.insert(0, {'message' : message, 'response_required' : response_required})
+            self.message.insert(0, {'message' : message, 'response_required' : response_required, 'background' : background})
         elif priority == 7:
             self.tags += message
 
@@ -181,8 +183,6 @@ class ReasoningEngine(KnowledgeEngine):
             self.update_message_chain("I have access to over 200,000 games. I can help you get specific information about a particular game or \
                 suggest a game based on your requirements.", response_required=False)
             self.update_message_chain("What do you want me to do?", priority="low")
-            # self.modify(f1, action="help")
-            # self.halt()
         else:
             # user wants game suggestion
             matches = self.get_multiple_matches(doc, MultiTokenDictionary['suggest_game'])
@@ -193,22 +193,25 @@ class ReasoningEngine(KnowledgeEngine):
             else:
                 # user has written specific game name
                 game, closest_match = get_specific_game_from_db(message_text)
-                print("GAME SELECTED ", game)
-                print("Closest game ", closest_match)
                 if game:
                     # the specified game is in DB
-                    message = "Selected game: {}.".format(game[0][1])
+                    message = "Selected game: <b>{}</b>.".format(game[0][1])
                     self.boardgame = game[0][1]
-                    self.update_message_chain(message, response_required=False, priority="high")
+                    self.background_image = game[0][4]
+                    self.update_message_chain(message, response_required=False, priority="high", background=self.background_image)
                     self.modify(f1, action="game_selected")
                 else: 
                     # Game is not in DB. Suggest alternative
                     req_yes_no = "{REQ:" + "Choice}"
+                    choice = None
                     if not self.ask1:
                         message = "Sorry, it seems that <b>'{}'</b> doesn't exist in the database. \
-                            The closest game I found is <b>'{}'</b>.  <br>{}Do you want to continue with the suggested game?".format(message_text.capitalize(), closest_match[0].capitalize(), req_yes_no)
-                        self.boardgame = closest_match[0]
-                        self.update_message_chain(message, priority="high")
+                            The closest game I found is <b>'{}'</b>. ".format(message_text.capitalize(), closest_match[0][1].capitalize())
+                        message2 = "{}Do you want to continue with the suggested game?".format(req_yes_no)
+                        self.boardgame = closest_match[0][1]
+                        self.background_image = closest_match[0][4]
+                        self.update_message_chain(message, priority="low", response_required=False)
+                        self.update_message_chain(message2, priority="low")
                         self.ask1 = True
                     choice = self.check_yes_no(message_text)
                     if choice:
@@ -221,30 +224,19 @@ class ReasoningEngine(KnowledgeEngine):
                             msg = "{}Please write 'yes' or 'no'. "
                             self.update_message_chain(msg.format(req_yes_no), priority="low")
                             self.modify(f1, action="path_choice")
+                    else:
+                        msg = "{}Please write 'yes' or 'no'. "
+                        self.update_message_chain(msg.format(req_yes_no), priority="low")
                         
-
-                    
-                    
-        print("Game found?", game_in_db)
-        # self.modify(f1, action="random")
-        # if game_in_db == True:
-        #     message = "Selected game: {}.".format(game[0][1])
-        #     self.boardgame = message_text
-        #     self.update_message_chain(message, response_required=False, priority="high")
-        #     self.modify(f1, action="game_selected")
-        # elif game_in_db == False:
-        #     req_yes_no = "{REQ:" + "Choice}"
-        #     message = "Sorry, it seems like '{}' doesn't exist in the database. \
-        #         The closest game I found is '{}'.  {}Do you want to continue with the suggested game?".format(message_text.capitalize(), closest_match[0].capitalize(), req_yes_no)
-        #     self.update_message_chain(message, priority="high")
-        #     self.modify(f1, action="game_selected")
+                        
 
 
     @Rule(AS.f1 << Fact(action="game_selected"),
         salience=98)
     def game_selected(self, f1):
         print("game selected facts", self.facts)
-        self.update_message_chain("I can help provide almost anything for <b>{}</b> - specific information, instructions or reviews. What do you need?".format(self.boardgame.capitalize()), priority="low")
+        self.update_message_chain("I can help provide almost anything for <b>{}</b> - specific information, instructions or reviews. What do you need?".format(self.boardgame.capitalize())
+            , priority="low", background=self.background_image)
         self.modify(f1, action="game_journey")
     
     @Rule(AS.f1 << Fact(action="game_not_found"),
@@ -280,26 +272,17 @@ class ReasoningEngine(KnowledgeEngine):
                 self.update_message_chain(msg.format(req_yes_no), priority="low")
         
 
-
-
-
-        
-
     @Rule(AS.f1 << Fact(action="game_journey"),
           Fact(message_text=MATCH.message_text),
           salience=99)
-    def direct_action(self, f1, message_text):
-        """
-
-        """
+    def game_information_journey(self, f1, message_text):
         # print("FACTS:", self.knowledge)
         doc = self.process_nlp(message_text)
         # print out what the tokens are in the user input
         # print("HEEEEERRRRREEEEEE")
         # for token in doc:
         #     print(token.text, token.pos_, token.dep_, token.lemma_)
-        print("message from user", message_text)
-        
+        print("Game in the journey ", self.boardgame)
         matches = self.get_multiple_matches(doc, MultiTokenDictionary['game_info'])
         if len(matches) > 0:
             print("GAME INFO")
@@ -309,10 +292,8 @@ class ReasoningEngine(KnowledgeEngine):
         else:
             matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
             if (len(matches) > 0) :
-                print("Instructions")
                 self.update_message_chain("Instructions: Cool, here's how to play Chess!", response_required=False, priority="high")
                 self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = "low")
-                print(self.message)
                 self.declare(Fact(instructions = True))
                 self.modify(f1, action="instructions")
             else:

@@ -28,15 +28,18 @@ def receive_user_input():
                 Specify a game and continue with your questions. If you want to know I can do, type 'help'."
         this_chat.add_message("bot", response)
         response_required = True
+        background = False
     elif "BOTRESPONSE" in message_input:
         message = this_chat.pop_message()
         response = message['message']
         response_required = message['response_required']
+        background = False
     else:
         # try:
         message = this_chat.add_message("human", message_input)
         response = message[0]
         response_required = message[1]
+        background = message[2]
         # except Exception as e:
         #     print(e)
         #     message = ["Exception: Sorry! There has been an issue with this chat, please "
@@ -45,7 +48,8 @@ def receive_user_input():
         #     response_required = message[1]
 
     return jsonify({"message" : response,
-                    "response_required" : response_required})
+                    "response_required" : response_required,
+                    "background" : background})
    
 
     # connect_db()
