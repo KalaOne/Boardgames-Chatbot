@@ -346,7 +346,7 @@ class ReasoningEngine(KnowledgeEngine):
        
 
 
-    @Rule( Fact(action="information"),
+    @Rule(Fact(action="information"),
         Fact(info_type="general"),
          salience= 91)
     def provide_general_info(self):
@@ -360,11 +360,16 @@ class ReasoningEngine(KnowledgeEngine):
                 <li> Playing time: {} </li> \
                 <li> Age: {} </li> </ul>"
         strings_to_replace = [
-            ('<[^<]+?>', ''),
+            ('<[^<]+?/>', ''),
+            ('<.*?>', ''),
             ('&quot;', '"'),
-            ('&ndash;', '-')
+            ('&rsquo;', "'"),
+            ('&ndash;', '-'),
+            ('&ldquo;', '"'),
+            ('&rdquo;', '"'),
         ]
         for old, new in strings_to_replace:
+            print(old, new)
             description = re.sub(old, new, self.boardgame[2])
         print(description)
 
