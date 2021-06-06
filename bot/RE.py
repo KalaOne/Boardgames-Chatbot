@@ -48,7 +48,8 @@ MultiTokenDictionary = {
 
     "help": [
         [{"LEMMA": "help"}],
-        [{"LEMMA": "assistance"}]
+        [{"LEMMA": "assistance"}],
+        [{"LOWER": "help"}]
 
     ],
 
@@ -84,7 +85,7 @@ class ReasoningEngine(KnowledgeEngine):
         self.boardgame = None
         #genre ,max_players, play_time, rating,
         self.game_suggestion_journey = "gn_pl_pt_rt_"
-        self.ans_g = self.ans_p = self.ans_t = self.ans_r = False
+        self.ans_g = self.ans_p = self.ans_t = self.specific_info_question = False
         self.ask1 = False
         self.background = False
         self.background_image = None
@@ -191,7 +192,7 @@ class ReasoningEngine(KnowledgeEngine):
         # User written 'help'
         if len(matches) > 0:
             first_message = False
-            self.update_message_chain("I have access to over 200,000 games. I can help you get specific information about a particular game or \
+            self.update_message_chain("I have access to over 250,000 games. I can help you get specific information about a particular game or \
                 suggest a game based on your requirements.", response_required=False)
             self.update_message_chain("What do you want me to do?", priority="low")
         else:
@@ -252,30 +253,75 @@ class ReasoningEngine(KnowledgeEngine):
  
 
     @Rule(Fact(action="suggest_game"),
-        Fact(suggest_game = True),
+        AS.f2 << Fact(suggest_game = True),
         Fact(message_text=MATCH.message_text),
         salience = 98)
-    def suggest_game(self, message_text):
+    def suggest_game(self, f2, message_text):
         doc = self.process_nlp(message_text)
-        #genre ,max_players, play_time, rating,
-        # self.game_suggestion_journey = "gn_pl_pt_rt_"
-        if 'gn_' in self.game_suggestion_journey:
-            req_yes_no = "{REQ:" + "Choice}"
-            if not self.ans_g:
-                msg = "{}Let's start with 'Do you know what genre you are interested in?'"
+        req_yes_no = "{REQ:" + "Choice}"
+        if not self.specific_info_question:
+            msg = "{}Do you know any information that could help the suggestion?"
+            self.update_message_chain(msg.format(req_yes_no), priority="low")
+        choice = self.check_yes_no(message_text)
+        if choice:
+            if choice.text == 'yes':
+                self.specific_info_question = True
+                self.update_message_chain("Noice! What specific information do you know? Separate the categories with a comma ','", response_required=False)
+                self.declare(Fact(suggest_known_info=True))
+                self.modify(f2, suggest_game = False)
+            elif choice.text == 'no':
+                self.specific_info_question = True
+                self.update_message_chain("I'll ask you a few questions to help narrow down games to suggest.", response_required=False)
+                self.modify(f2, suggest_game = False)
+                self.declare(Fact(suggest_known_info=False))
+        elif not choice:
+            if not self.specific_info_question:
+                msg = "Suggest_game: {}Please write 'yes' or 'no'. "
                 self.update_message_chain(msg.format(req_yes_no), priority="low")
-            choice = self.check_yes_no(message_text)
-            if choice:
-                if choice.text == 'yes':
-                    self.update_message_chain("Cool! You can specify up to three genres. Separate them by comma (',').", priority="high")
-                    self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', '')
-                elif choice.text == 'no':
-                    self.update_message_chain("Alright, what about maximum number of players?", priority="high")
-                    self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', 'gn')
-            else:
-                msg = "{}Please write 'yes' or 'no'. "
-                self.update_message_chain(msg.format(req_yes_no), priority="low")
+
+    @Rule(Fact(action="suggest_game"),
+        # Fact(suggest_game = True),
+        Fact(suggest_known_info=True),
+        Fact(message_text=MATCH.message_text),
+        salience = 97)
+    def suggest_game_user_info(self, message_text):
+        print("User is going to provide information they know. We extract it here and search DB from it")
+        self.update_message_chain("Say something I'm givbing up on you...", priority="low")
+
+
+    @Rule(Fact(action="suggest_game"),
+        # Fact(suggest_game = True),
+        Fact(suggest_known_info=False),
+        Fact(message_text=MATCH.message_text),
+        salience = 96)
+    def suggest_game_general_info(self, message_text):
+        print("User doesn't know shit. We extract general information from them NOW. Display games after that. Hehehee")
         
+        #genre ,max_players, play_time,
+        # self.game_suggestion_journey = "gn_pl_pt_"
+        # if 'gn_' in self.game_suggestion_journey:
+        #     req_yes_no = "{REQ:" + "Choice}"
+        #     if not self.ans_g:
+        msg = "Let's start with <b>genre</b>. What genre are you interested in? You can specify up to 3 genres.\
+                    Separate them by comma ','."
+        self.update_message_chain("Let's start with <b>genre</b>. What genre are you interested in? You can specify up to 3 genres.\
+                    Separate them by comma ','.", priority="low", response_required=True)
+                
+
+            # choice = self.check_yes_no(message_text)
+        #     if choice:
+        #         if choice.text == 'yes':
+        #             self.update_message_chain("Cool! You can specify up to three genres. Separate them by comma (',').", priority="high")
+        #             self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', '')
+        #         elif choice.text == 'no':
+        #             self.update_message_chain("Alright, what about maximum number of players?", priority="high")
+        #             self.game_suggestion_journey = self.game_suggestion_journey.replace('gn_', 'gn')
+        #     else:
+        #         msg = "{}Please write 'yes' or 'no'. "
+        #         self.update_message_chain(msg.format(req_yes_no), priority="low")
+        
+
+     
 
     @Rule(AS.f1 << Fact(action="game_journey"),
           Fact(message_text=MATCH.message_text),

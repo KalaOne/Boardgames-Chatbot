@@ -6,6 +6,8 @@ let tag_map = {
     
 }
 
+// const sdk = window.SpeechSDK
+// const speechConfig = sdk.SpeechConfig.fromSubscription("be0b6d81b60844a084339d50a0b79832", "uksouth");
 // Document.ready
 $(function () {
 
@@ -152,3 +154,72 @@ function getControlTags(messageText){
 function setBackgroundImage(imageURL) {
     $('body').css("background", " url('"+imageURL+"') repeat").css("background-size", "450px, 450px");
 }
+
+// async function synthesizeSpeech(text) {
+//     text = text.replace("AKOBot", "akobot")
+//     text = text.replace("<br/>", "").replace("<br>", "").replace("</i>", "").replace("<i>", "")
+//     let ssml = `<speak version="1.0" xmlns="https://www.w3.org/2001/10/synthesis" xml:lang="en-GB">
+//                 <voice name="en-GB-RyanNeural">${text}</voice></speak>`
+//     const audioConfig = sdk.AudioConfig.fromDefaultSpeakerOutput();
+//     const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
+//     audioConfig.privDestination.privAudio.addEventListener("ended", function (){speaking=false})
+//     while(speaking){
+//         await sleep(200);
+//     }
+//     speaking = true;
+//     synthesizer.speakSsmlAsync(
+//         ssml,
+//         result => {
+//             if (result) {
+//                 console.log(JSON.stringify(result));
+//             }
+//             console.log(synthesizer)
+//             synthesizer.close();
+//         },
+//         error => {
+//             console.log(error);
+//             synthesizer.close();
+//         });
+// }
+
+// function fromMic(){
+//     let audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
+//     let recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+    
+//     $('.record-speech').addClass('animate');
+//     recognizer.recognizeOnceAsync(result => {
+//         console.log(`RECOGNIZED: Text=${result.text}`);
+//         $('.record-speech').removeClass('animate');
+//         $('.left-box').val(result.text); 
+//         setTimeout(() => {
+//             $('.send-message').click()
+//         }, 1000);
+//     });
+// }
+
+// Друга функция която може да извършва подобно нещо... Не е тествана, ама е нещо малко което може да го ТУРИШ
+// Пробвай, може да стане, знае ли човек...
+// Сорс - https://www.studytonight.com/post/javascript-speech-recognition-example-speech-to-text
+
+// // new speech recognition object
+// var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
+// var recognition = new SpeechRecognition();
+            
+// // This runs when the speech recognition service starts
+// recognition.onstart = function() {
+//     console.log("We are listening. Try speaking into the microphone.");
+// };
+
+// recognition.onspeechend = function() {
+//     // when user is done speaking
+//     recognition.stop();
+// }
+              
+// // This runs when the speech recognition service returns result
+// recognition.onresult = function(event) {
+//     var transcript = event.results[0][0].transcript;
+//     var confidence = event.results[0][0].confidence;
+// };
+              
+// // start recognition
+// recognition.start();

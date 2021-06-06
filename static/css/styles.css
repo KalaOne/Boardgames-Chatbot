@@ -133,6 +133,7 @@
   .bottom_wrapper .message_input_wrapper {
     display: inline-block;
     height: 50px;
+    float: left;
     border-radius: 25px;
     border: 1px solid #bcbdc0;
     width: calc(100% - 160px);
@@ -149,7 +150,7 @@
     color: gray;
   }
   .bottom_wrapper .send_message {
-    width: 140px;
+    width: 100px;
     height: 50px;
     display: inline-block;
     border-radius: 50px;
@@ -181,3 +182,53 @@
     padding: 0; /* Remove padding */
     margin: 0; /* Remove margins */
   }
+
+  .send_message_area{
+    border: 0;
+    border-radius: 50%;
+    font-family: 'iconly', serif;
+    font-size: 20px;
+    height: 30px;
+    margin-left: 15px;
+    outline: 0;
+    position: relative;
+    transition: background ease-in-out 0.4s, color ease-in-out 0.4s;
+  }
+
+  .send_message_area:before{
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .send_message_area.record-speech{
+    background: #FFF;
+  }
+  
+  .send_message_area.record-speech.animate{
+    animation: recording 1.8s infinite ease-in-out;
+  }
+  
+  .send_message_area.record-speech:before{
+    content: '\e95e';
+  }
+  
+  .send_message_area.record-speech:hover{
+    color: red;
+  }
+
+@keyframes recording {
+	0% {
+		color: #202020;
+	}
+
+	50%{
+		color: red;
+	}
+
+	100%{
+		color: #202020;
+	}
+}
+
