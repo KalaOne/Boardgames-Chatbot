@@ -8,6 +8,7 @@ from fuzzywuzzy import fuzz
 import re
 import math
 from difflib import SequenceMatcher
+import string
 
 
 conn = psycopg2.connect(host='localhost', port=5433, user='postgres', password='postgres')
@@ -183,8 +184,68 @@ def get_specific_game_from_db(game_name):
 
     return game_data, close_game_data
 
+def pull_data_for_suggested_game(genre, players, playtime):
+    num_genre = len(genre)
+    min_players = players[0]
+    max_players = players[1]
+    cur = conn.cursor()
+
+    ##Soltion:
+    # Pull description based on user from bgg_data
+    # get 2nd,3rd,4th words from description
+    # pull game based on words in description
+    # escape cases if it's null/none.
+  
+    if num_genre > 0:
+        if num_genre == 1:
+            query = """SELECT description FROM bgg_data WHERE category0='{}' and \
+                minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
+                    """.format(string.capwords(genre[0]), min_players, max_players, playtime)
+
+        elif num_genre == 2:
+            query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+                and minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
+                    """.format(string.capwords(genre[0]),string.capwords(genre[1]), min_players, max_players, playtime)
+                   
+        elif num_genre == 3:
+            query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+              and category2='{}' and minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
+                    """.format(string.capwords(genre[0]),string.capwords(genre[1]),string.capwords(genre[2]), min_players, max_players, playtime)
+    try:
+        cur.execute(query)
+        descriptions = cur.fetchmany(10)
+    except psycopg2.DatabaseError as e:
+        print(e)
+        return e
+    
+    ten_games = []
+    current_game = None
+    for game in descriptions:
+        words = game[0].split()
+        print(words[1:4])
+        final_sentence = sentence = words[1] + " " + words[2] + " " + words[3] + " " + words[4]
+        if "'" in sentence:
+            index = sentence.find("'")
+            final_sentence = sentence[:index] + "'" + sentence[index:]
+        new_game_query = """SELECT * FROM big_bgg_data WHERE description LIKE '%{}%' \
+            """.format(final_sentence)
+        try:
+            cur.execute(new_game_query)
+            current_game = cur.fetchone()
+        except psycopg2.DatabaseError as e:
+            print(e)
+            
+        
+        if current_game:
+            ten_games.append(current_game)
+        else:
+            print("pull_data_for_suggested_game: No game has been added. Who knows, query might be wrong....")
+        
+    return ten_games
 
 
+# games = pull_data_for_suggested_game(['adventure','exploration'], [2,4], 60)
+# print(games)
 # close, close_under_70 = get_specific_game_from_db("sythe")
 # if close:
 #     print("found: ",close)
