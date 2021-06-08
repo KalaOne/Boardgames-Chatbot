@@ -2,6 +2,7 @@ let tag_message = "";
 let tag_map = {
     "Choice": "{TAG:Yes/No}",
     "InfoType" : "{TAG:S/G}",
+    "GENRE" : "{TAG:GENRE}",
     
     
 }

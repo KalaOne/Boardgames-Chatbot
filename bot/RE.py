@@ -85,7 +85,10 @@ class ReasoningEngine(KnowledgeEngine):
         self.boardgame = None
         #genre ,max_players, play_time, rating,
         self.game_suggestion_journey = "gn_pl_pt_rt_"
-        self.ans_g = self.ans_p = self.ans_t = self.specific_info_question = False
+        
+        self.ans_g = self.ans_p = self.ans_t = False
+        self.ask_p = self.ask_g = self.ask_t = self.specific_info_question = False 
+
         self.ask1 = False
         self.background = False
         self.background_image = None
@@ -249,16 +252,16 @@ class ReasoningEngine(KnowledgeEngine):
         doc = self.process_nlp(message_text)
         req_yes_no = "{REQ:" + "Choice}"
         if not self.specific_info_question:
-            msg = "{}Do you know any information that could help the suggestion?"
+            msg = "{}Do you know any information that could help the suggestion? (yes/no)"
             self.update_message_chain(msg.format(req_yes_no), priority="low")
             self.specific_info_question = True
         choice = self.check_yes_no(message_text)
         if choice:
             if choice.text == 'yes':
-                self.update_message_chain("Noice! What specific information do you know? Separate the categories with a comma ','", response_required=False)
+                self.update_message_chain("What specific information do you know? Separate the categories with a comma ','", response_required=False)
                 self.declare(Fact(suggest_known_info=True))
                 self.modify(f2, suggest_game = False)
-                
+
             elif choice.text == 'no':
                 self.update_message_chain("I'll ask you a few questions to help narrow down games to suggest.", priority="high", response_required=False)
                 self.modify(f2, suggest_game = False)
@@ -278,25 +281,67 @@ class ReasoningEngine(KnowledgeEngine):
         self.update_message_chain("Say something I'm givbing up on you...", priority="low")
 
 
-    @Rule(Fact(action="suggest_game"),
+    @Rule(AS.f1 << Fact(action="suggest_game"),
         # Fact(suggest_game = True),
         Fact(suggest_known_info=False),
         Fact(message_text=MATCH.message_text),
         salience = 96)
-    def suggest_game_general_info(self, message_text):
-        print("User doesn't know shit. We extract general information from them NOW. Display games after that. Hehehee")
-        
+    def suggest_game_general_info(self, f1, message_text):
+      
         #genre ,max_players, play_time,
         # self.game_suggestion_journey = "gn_pl_pt_"
         # if 'gn_' in self.game_suggestion_journey:
         #     req_yes_no = "{REQ:" + "Choice}"
         #     if not self.ans_g:
+        genre_tags = "{REQ:" + "GENRE}"
+        if not self.ask_g:
+            msg = "Let's start with <b>genre</b>. What genre are you interested in? You can specify up to 3 genres.\
+                        Separate them by comma ','."
+            self.update_message_chain(msg, priority="low", response_required=True)
+            self.ask_g = True
+        if self.ask_g and not self.ans_g:
+            genres = message_text.split(",")
+            self.ans_g = True
+            
+
+        if not self.ask_p:
+            msg = "How about number of players? E.g. 2-4."
+            self.update_message_chain(msg, priority="low", response_required=True)
+            self.ans_p = True
+
+        if self.ask_p and not self.ans_p:
+            players = message_text.split("-")
+            self.ans_p = True
+            print("------------Genres", genres)
+            print("------------Players", players)
+            
+        if not self.ask_t:
+            msg = "Roughly how long do you expect to play a game (in minutes)?"
+            self.update_message_chain(msg, priority="low", response_required=True)
+            self.ask_t = True
+        if self.ask_t and not self.ans_t:
+            time = message_text.split("-")
+            self.ans_t = True
+
+           
+        if self.ans_g and self.ans_p and self.ans_t:
+            self.modify(f1, action="pull_suggest_game")
+            # print("Genres input: ",genres)
+            # print("Playesr input:" , players)
+            # print("Time to play:", time)
         
-        msg = "Let's start with <b>genre</b>. What genre are you interested in? You can specify up to 3 genres.\
-                    Separate them by comma ','."
-        self.update_message_chain("Let's start with <b>genre</b>. What genre are you interested in? You can specify up to 3 genres.\
-                    Separate them by comma ','.", priority="low", response_required=True)
-                
+
+
+        # self.modify(f1, action='genre_collection')
+
+
+
+        ## We could instead of changing the action, get the user input and display following message.
+        ## Example is 1) Genre -> store process and store genre 2)Players -> store 3) Play time-> store -> Confirm information
+        ##              then change action and in the new function display the games based on the data
+        ##              Idk if this will work. Not sure how to get multiple data within 1 function.... Trial and error. BIG BREAKTHROUGH!
+
+
 
             # choice = self.check_yes_no(message_text)
         #     if choice:
@@ -310,8 +355,29 @@ class ReasoningEngine(KnowledgeEngine):
         #         msg = "{}Please write 'yes' or 'no'. "
         #         self.update_message_chain(msg.format(req_yes_no), priority="low")
         
+    @Rule(Fact(action='pull_suggest_game'),
+        Fact(message_text=MATCH.message_text),
+        salience = 96)
+    def genre_collection(self, message_text):
+        print("yes please!")
+        print("###########User message: ",message_text)
 
-     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @Rule(AS.f1 << Fact(action="game_journey"),
           Fact(message_text=MATCH.message_text),
