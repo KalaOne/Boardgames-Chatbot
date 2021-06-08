@@ -90,17 +90,6 @@ class ReasoningEngine(KnowledgeEngine):
         self.background = False
         self.background_image = None
 
-
-    def game_name_similarity(self, game_name):
-        result = None
-        # for game in self.games_list:
-        #     seq = difflib.SequenceMatcher(lambda x: x in " \t", game_name, game)
-        #     r = seq.ratio()*100
-        #     if r > 70:
-        #         result = game
-        
-        return result
-
     def process_nlp(self, text_to_process):
         """
         Sends user input to be proceed by spacy.
@@ -262,16 +251,16 @@ class ReasoningEngine(KnowledgeEngine):
         if not self.specific_info_question:
             msg = "{}Do you know any information that could help the suggestion?"
             self.update_message_chain(msg.format(req_yes_no), priority="low")
+            self.specific_info_question = True
         choice = self.check_yes_no(message_text)
         if choice:
             if choice.text == 'yes':
-                self.specific_info_question = True
                 self.update_message_chain("Noice! What specific information do you know? Separate the categories with a comma ','", response_required=False)
                 self.declare(Fact(suggest_known_info=True))
                 self.modify(f2, suggest_game = False)
+                
             elif choice.text == 'no':
-                self.specific_info_question = True
-                self.update_message_chain("I'll ask you a few questions to help narrow down games to suggest.", response_required=False)
+                self.update_message_chain("I'll ask you a few questions to help narrow down games to suggest.", priority="high", response_required=False)
                 self.modify(f2, suggest_game = False)
                 self.declare(Fact(suggest_known_info=False))
         elif not choice:
@@ -302,6 +291,7 @@ class ReasoningEngine(KnowledgeEngine):
         # if 'gn_' in self.game_suggestion_journey:
         #     req_yes_no = "{REQ:" + "Choice}"
         #     if not self.ans_g:
+        
         msg = "Let's start with <b>genre</b>. What genre are you interested in? You can specify up to 3 genres.\
                     Separate them by comma ','."
         self.update_message_chain("Let's start with <b>genre</b>. What genre are you interested in? You can specify up to 3 genres.\
@@ -465,6 +455,7 @@ class ReasoningEngine(KnowledgeEngine):
                 choice = self.get_multiple_matches(doc, MultiTokenDictionary['no'])
         if choice is not None:
             return choice
+        return choice
 
     def check_info_type(self, message_text):
         info_type = None
