@@ -3,6 +3,9 @@ let tag_map = {
     "Choice": "{TAG:Yes/No}",
     "InfoType" : "{TAG:S/G}",
     "GENRE" : "{TAG:GENRE}",
+    "NUM_PLAYERS":"{TAG:PLAYERS}",
+    "PLAY_TIME" : "{TAG:TIME}",
+    
     
     
 }

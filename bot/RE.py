@@ -2,7 +2,7 @@ from experta import *
 import spacy
 from spacy.matcher import Matcher, PhraseMatcher
 from .scraper import scrape
-from .DB import connect_db, get_specific_game_from_db
+from .DB import connect_db, get_specific_game_from_db, pull_data_for_suggested_game
 import difflib
 import re
 
@@ -249,7 +249,7 @@ class ReasoningEngine(KnowledgeEngine):
         AS.f2 << Fact(suggest_game = True),
         Fact(message_text=MATCH.message_text),
         salience = 98)
-    def suggest_game(self, f2, message_text):
+    def suggest_game0(self, f2, message_text):
         doc = self.process_nlp(message_text)
         req_yes_no = "{REQ:" + "Choice}"
         if not self.specific_info_question:
@@ -282,21 +282,35 @@ class ReasoningEngine(KnowledgeEngine):
         print("User is going to provide information they know. We extract it here and search DB from it")
         self.update_message_chain("Say something I'm givbing up on you...", priority="low")
 
+
+
+
+
+
+
+
+
+
+
+
 ## No journey below ##
     @Rule(Fact(action="suggest_game"),
         Fact(suggest_known_info=False),
         Fact(message_text=MATCH.message_text),
         salience = 96)
-    def suggest_game_general_info(self, message_text):
+    def suggest_game(self, message_text):
+        ask_genre = "{REQ:" + "GENRE}"
         if not self.ask_g:
-            msg = "Let's start with <b>genre</b>. What genre are you interested in? You can specify up to 3 genres.\
+            msg = "{}Let's start with <b>genre</b>. What genre are you interested in? You can specify up to 3 genres.\
                         Separate them by comma ','."
-            self.update_message_chain(msg, priority="low", response_required=True)
+            self.update_message_chain(msg.format(ask_genre), priority="low", response_required=True)
             self.ask_g = True
         if self.ask_g:
-            genres = message_text.split(",")
-            self.ans_g = True
-        if self.suggest_game_genres is None:
+            genres = self.get_genre(message_text)
+            if genres:
+                genres = genres.split(",")
+                self.ans_g = True
+        if self.suggest_game_genres is None and self.ans_g:
             self.suggest_game_genres = genres
 
     @Rule(Fact(action="suggest_game"),
@@ -304,14 +318,17 @@ class ReasoningEngine(KnowledgeEngine):
         Fact(message_text=MATCH.message_text),
         salience = 95)
     def suggest_game1(self, message_text):
-        msg = "How about number of players? E.g. 2-4."
-        self.update_message_chain(msg, priority="low", response_required=True)
-        self.ask_p = True
-
+        ask_players = "{REQ:"+ "NUM_PLAYERS}"
+        if not self.ask_p:
+            msg = "{}How about number of players? E.g. 2-4."
+            self.update_message_chain(msg.format(ask_players), priority="low", response_required=True)
+            self.ask_p = True
         if self.ask_p:
-            players = message_text.split("-")
-            self.ans_p = True
-        if self.suggest_game_players is None:
+            players = self.get_num_players(message_text)
+            if players:
+                players = players.split("-")
+                self.ans_p = True
+        if self.suggest_game_players is None and self.ans_p:
             self.suggest_game_players = players
 
     
@@ -320,34 +337,45 @@ class ReasoningEngine(KnowledgeEngine):
         Fact(message_text=MATCH.message_text),
         salience = 94)
     def suggest_game2(self,f1, message_text):
+        ask_time = "{REQ:"+"PLAY_TIME}"
         if not self.ask_t:
-            msg = "Roughly how long do you expect to play a game (in minutes)?"
-            self.update_message_chain(msg, priority="low", response_required=True)
+            msg = "{}Roughly how long do you expect to play a game (in minutes)?"
+            self.update_message_chain(msg.format(ask_time), priority="low", response_required=True)
             self.ask_t = True
         if self.ask_t:
-            time = message_text.split("-")
-            self.ans_t = True
-            print("--------time:", time)
-        if self.suggest_game_time is None:
+            time = self.get_play_time(message_text)
+            if time:    
+                print("time:::", time)
+                if "-" in time:
+                    time = time.split("-")
+                self.ans_t = True
+        if self.suggest_game_time is None and self.ans_t:
+            print("COMING IN HERE BEBEEEEEEEEEE")
             self.suggest_game_time = time
-        self.modify(f1, action="pull_suggest_game")
+            self.modify(f1, action="pull_suggest_game")
     
-    @Rule(Fact(action='pull_suggest_game'),
-        Fact(message_text=MATCH.message_text),
-        salience = 96)
-    def genre_collection(self, message_text):
-        self.update_message_chain("Okay, now you should get game suggestions", priority="low", response_required=False)
+
+    @Rule(AS.act << Fact(action='pull_suggest_game'),
+        salience = 99)
+    def genre_collection(self, act):
+        self.update_message_chain("Okay, here are top 10 games that match your request.", priority="high", response_required=False)
+        games_to_show = pull_data_for_suggested_game(self.suggest_game_genres, self.suggest_game_players, self.suggest_game_time)
+        games_display = """ <ol class='ten-games-list'>
+
+        """
+        for g in games_to_show:
+            games_display += '<li>{}</li>'.format(g[1])
         
+        games_display += "</ol>"
+        self.update_message_chain(games_display, priority="low", response_required=False)
+        self.update_message_chain("I hope this satisfies your needs. Thanks for stopping by!", priority="low", response_required=False)
+        self.modify(act, action='finish_it')
 
 
-
-
-
-
-
-
-
-
+    @Rule(Fact(action='finish_it'),
+        salience = 98)
+    def finish_it(self):
+        self.update_message_chain("Okay, you can go now.", priority="low", response_required=True)
 
 
 
@@ -511,6 +539,26 @@ class ReasoningEngine(KnowledgeEngine):
         print("Info_type: ", info_type)
         if info_type is not None:
             return info_type
+        
+
+    def get_genre(self, message_text):
+        genre = None
+        if "{TAG:GENRE}" in message_text:
+            tag, genre = message_text.split("{TAG:GENRE} ")
+        return genre
+    
+    def get_num_players(self, message_text):
+        num_players = None
+        if "{TAG:PLAYERS}" in message_text:
+            tag, num_players = message_text.split("{TAG:PLAYERS} ")
+        return num_players
+
+    def get_play_time(self, message_text):
+        time = None
+        if "{TAG:TIME}" in message_text:
+            tag, time = message_text.split("{TAG:TIME} ")
+        return time
+
 
 # r = ReasoningEngine()
 # doc = r.process_nlp("{TAG:Yes/No} no")

@@ -186,31 +186,47 @@ def get_specific_game_from_db(game_name):
 
 def pull_data_for_suggested_game(genre, players, playtime):
     num_genre = len(genre)
+    num_playtime = len(playtime)
     min_players = players[0]
     max_players = players[1]
     cur = conn.cursor()
 
-    ##Soltion:
-    # Pull description based on user from bgg_data
-    # get 2nd,3rd,4th words from description
-    # pull game based on words in description
-    # escape cases if it's null/none.
-  
+    print("Genre coming in:", genre)
+    print("Players coming in:", players)
+    print("Time coming in:", playtime)
+    print("Is time array?", isinstance(playtime, list))
+    
     if num_genre > 0:
         if num_genre == 1:
-            query = """SELECT description FROM bgg_data WHERE category0='{}' and \
-                minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
-                    """.format(string.capwords(genre[0]), min_players, max_players, playtime)
+            if not isinstance(playtime, list):
+                query = """SELECT description FROM bgg_data WHERE category0='{}' and \
+                    minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
+                        """.format(string.capwords(genre[0]), min_players, max_players, playtime)
+            elif isinstance(playtime, list):
+                query = """SELECT description FROM bgg_data WHERE category0='{}' and \
+                    minplayers='{}.0' and maxplayers='{}.0' and minplaytime='{}.0' and maxplaytime='{}.0' \
+                        """.format(string.capwords(genre[0]), min_players, max_players, playtime[0], playtime[1])
 
         elif num_genre == 2:
-            query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
-                and minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
-                    """.format(string.capwords(genre[0]),string.capwords(genre[1]), min_players, max_players, playtime)
-                   
+            if not isinstance(playtime, list):
+                query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+                    and minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
+                        """.format(string.capwords(genre[0]),string.capwords(genre[1]), min_players, max_players, playtime)
+            elif isinstance(playtime, list):
+                    query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+                    and minplayers='{}.0' and maxplayers='{}.0' and minplaytime='{}.0' and maxplaytime='{}.0' \
+                        """.format(string.capwords(genre[0]),string.capwords(genre[1]), min_players, max_players, playtime[0], playtime[1])
         elif num_genre == 3:
-            query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
-              and category2='{}' and minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
-                    """.format(string.capwords(genre[0]),string.capwords(genre[1]),string.capwords(genre[2]), min_players, max_players, playtime)
+            if not isinstance(playtime, list):
+                query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+                and category2='{}' and minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
+                        """.format(string.capwords(genre[0]),string.capwords(genre[1]),
+                        string.capwords(genre[2]), min_players, max_players, playtime)
+            elif isinstance(playtime, list):
+                    query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+                and category2='{}' and minplayers='{}.0' and maxplayers='{}.0' and minplaytime='{}.0' and maxplaytime='{}.0' \
+                        """.format(string.capwords(genre[0]),string.capwords(genre[1]), 
+                        string.capwords(genre[2]), min_players, max_players, playtime[0], playtime[1])
     try:
         cur.execute(query)
         descriptions = cur.fetchmany(10)
@@ -222,7 +238,7 @@ def pull_data_for_suggested_game(genre, players, playtime):
     current_game = None
     for game in descriptions:
         words = game[0].split()
-        print(words[1:4])
+       
         final_sentence = sentence = words[1] + " " + words[2] + " " + words[3] + " " + words[4]
         if "'" in sentence:
             index = sentence.find("'")
@@ -245,7 +261,9 @@ def pull_data_for_suggested_game(genre, players, playtime):
 
 
 # games = pull_data_for_suggested_game(['adventure','exploration'], [2,4], 60)
-# print(games)
+# for g in games:
+#     print(g[1])
+
 # close, close_under_70 = get_specific_game_from_db("sythe")
 # if close:
 #     print("found: ",close)
