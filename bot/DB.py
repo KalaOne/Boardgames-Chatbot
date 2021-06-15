@@ -184,9 +184,8 @@ def get_specific_game_from_db(game_name):
 
     return game_data, close_game_data
 
-def pull_data_for_suggested_game(genre, players, playtime):
+def pull_suggested_game_no_background_info(genre, players, playtime):
     num_genre = len(genre)
-    num_playtime = len(playtime)
     min_players = players[0]
     max_players = players[1]
     cur = conn.cursor()
@@ -199,33 +198,33 @@ def pull_data_for_suggested_game(genre, players, playtime):
     if num_genre > 0:
         if num_genre == 1:
             if not isinstance(playtime, list):
-                query = """SELECT description FROM bgg_data WHERE category0='{}' and \
+                query = """SELECT description, boardgamerank FROM bgg_data WHERE category0='{}' and \
                     minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
-                        """.format(string.capwords(genre[0]), min_players, max_players, playtime)
+                        order by boardgamerank""".format(string.capwords(genre[0]), min_players, max_players, playtime)
             elif isinstance(playtime, list):
-                query = """SELECT description FROM bgg_data WHERE category0='{}' and \
+                query = """SELECT description, boardgamerank FROM bgg_data WHERE category0='{}' and \
                     minplayers='{}.0' and maxplayers='{}.0' and minplaytime='{}.0' and maxplaytime='{}.0' \
-                        """.format(string.capwords(genre[0]), min_players, max_players, playtime[0], playtime[1])
+                        order by boardgamerank""".format(string.capwords(genre[0]), min_players, max_players, playtime[0], playtime[1])
 
         elif num_genre == 2:
             if not isinstance(playtime, list):
-                query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+                query = """SELECT description, boardgamerank FROM bgg_data WHERE category0='{}' and category1='{}'\
                     and minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
-                        """.format(string.capwords(genre[0]),string.capwords(genre[1]), min_players, max_players, playtime)
+                        order by boardgamerank""".format(string.capwords(genre[0]),string.capwords(genre[1]), min_players, max_players, playtime)
             elif isinstance(playtime, list):
-                    query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+                    query = """SELECT description, boardgamerank FROM bgg_data WHERE category0='{}' and category1='{}'\
                     and minplayers='{}.0' and maxplayers='{}.0' and minplaytime='{}.0' and maxplaytime='{}.0' \
-                        """.format(string.capwords(genre[0]),string.capwords(genre[1]), min_players, max_players, playtime[0], playtime[1])
+                        order by boardgamerank""".format(string.capwords(genre[0]),string.capwords(genre[1]), min_players, max_players, playtime[0], playtime[1])
         elif num_genre == 3:
             if not isinstance(playtime, list):
-                query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+                query = """SELECT description, boardgamerank FROM bgg_data WHERE category0='{}' and category1='{}'\
                 and category2='{}' and minplayers='{}.0' and maxplayers='{}.0' and playingtime='{}.0' \
-                        """.format(string.capwords(genre[0]),string.capwords(genre[1]),
+                        order by boardgamerank""".format(string.capwords(genre[0]),string.capwords(genre[1]),
                         string.capwords(genre[2]), min_players, max_players, playtime)
             elif isinstance(playtime, list):
-                    query = """SELECT description FROM bgg_data WHERE category0='{}' and category1='{}'\
+                    query = """SELECT description, boardgamerank FROM bgg_data WHERE category0='{}' and category1='{}'\
                 and category2='{}' and minplayers='{}.0' and maxplayers='{}.0' and minplaytime='{}.0' and maxplaytime='{}.0' \
-                        """.format(string.capwords(genre[0]),string.capwords(genre[1]), 
+                        order by boardgamerank""".format(string.capwords(genre[0]),string.capwords(genre[1]), 
                         string.capwords(genre[2]), min_players, max_players, playtime[0], playtime[1])
     try:
         cur.execute(query)
@@ -259,6 +258,71 @@ def pull_data_for_suggested_game(genre, players, playtime):
         
     return ten_games
 
+def pull_suggested_game_with_background_info(category_dict):
+    print(category_dict)
+    cur = conn.cursor()
+
+    query = """ select description, boardgamerank from bgg_data where category0='{}' and maxplayers='{}'
+            and yearpublished='{}' and playingtime='{}'
+            """.format(string.capwords(category_dict["category0"]),category_dict["maxplayers"],
+                    category_dict["yearpublished"],category_dict["playingtime"])
+
+    try:
+        cur.execute(query)
+        descriptions = cur.fetchmany(10)
+    except psycopg2.DatabaseError as e:
+        print(e)
+        return e
+
+    ten_games = []
+    current_game = None
+    for game in descriptions:
+        words = game[0].split()
+       
+        final_sentence = sentence = words[1] + " " + words[2] + " " + words[3] + " " + words[4]
+        if "'" in sentence:
+            index = sentence.find("'")
+            final_sentence = sentence[:index] + "'" + sentence[index:]
+        new_game_query = """SELECT * FROM big_bgg_data WHERE description LIKE '%{}%' \
+            """.format(final_sentence)
+        try:
+            cur.execute(new_game_query)
+            current_game = cur.fetchone()
+        except psycopg2.DatabaseError as e:
+            print(e)
+            
+        
+        if current_game:
+            ten_games.append(current_game)
+        else:
+            print("pull_data_for_suggested_game: No game has been added. Who knows, query might be wrong....")
+        
+    return ten_games
+    
+
+
+def get_db_column_names(db_name):
+    print("Searching DB name:", db_name)
+    db_columns = None
+    cur = conn.cursor()
+    query = """ SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+            AND table_name   = '{}';""".format(db_name)
+    try:
+        cur.execute(query)
+        db_columns = cur.fetchall()
+    except psycopg2.DatabaseError as e:
+        print(e)
+        return e
+    
+    if db_columns:
+        return db_columns
+    else:
+        print("Unfortunately DB with name '{}' doesn't exist".format(db_name))    
+
+# asd = get_db_column_names('big_bgg_data')
+# print(asd)
 
 # games = pull_data_for_suggested_game(['adventure','exploration'], [2,4], 60)
 # for g in games:

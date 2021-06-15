@@ -2,7 +2,7 @@ from experta import *
 import spacy
 from spacy.matcher import Matcher, PhraseMatcher
 from .scraper import scrape
-from .DB import connect_db, get_specific_game_from_db, pull_data_for_suggested_game
+from .DB import *
 import difflib
 import re
 
@@ -86,6 +86,14 @@ class ReasoningEngine(KnowledgeEngine):
         self.suggest_game_genres = None
         self.suggest_game_players = None
         self.suggest_game_time = None
+
+        self.known_categories = {
+            "yearpublished" : "",
+            "maxplayers" : "",
+            "playingtime" : "",
+            "category0" : ""
+        }
+        self.game_dict_populated = False
         
         self.ans_g = self.ans_p = self.ans_t = False
         self.ask_p = self.ask_g = self.ask_t = self.specific_info_question = False 
@@ -259,12 +267,14 @@ class ReasoningEngine(KnowledgeEngine):
         choice = self.check_yes_no(message_text)
         if choice:
             if choice.text == 'yes':
-                self.update_message_chain("What specific information do you know? Separate the categories with a comma ','", response_required=False)
+                ask_categories = "{REQ:"+"CATEGORY}"
+                message = "{}What specific information do you know? Separate the categories with a comma ','"
+                self.update_message_chain(message.format(ask_categories), response_required=True)
                 self.declare(Fact(suggest_known_info=True))
                 self.modify(f2, suggest_game = False)
 
             elif choice.text == 'no':
-                self.update_message_chain("I'll ask you a few questions to help narrow down games to suggest.", priority="high", response_required=False)
+                self.update_message_chain("I'll ask you a few questions to help narrow down games to suggest.", response_required=False)
                 self.modify(f2, suggest_game = False)
                 self.declare(Fact(suggest_known_info=False))
         elif not choice:
@@ -273,14 +283,24 @@ class ReasoningEngine(KnowledgeEngine):
                 self.update_message_chain(msg.format(req_yes_no), priority="low")
 
 ## Yes journey below ##
-    @Rule(Fact(action="suggest_game"),
-        # Fact(suggest_game = True),
+    @Rule(AS.act << Fact(action="suggest_game"),
         Fact(suggest_known_info=True),
         Fact(message_text=MATCH.message_text),
         salience = 97)
-    def suggest_game_user_info(self, message_text):
-        print("User is going to provide information they know. We extract it here and search DB from it")
-        self.update_message_chain("Say something I'm givbing up on you...", priority="low")
+    def suggest_game_user_info(self,act, message_text):
+        self.get_known_categories(message_text)
+        if self.game_dict_populated:
+            self.update_message_chain("Alrighty! Here are the top 10 games that match your request.", priority="low", response_required=False)
+            games_to_show = pull_suggested_game_with_background_info(self.known_categories)
+            if games_to_show:
+                games_display = """ <ol class='ten-games-list'>"""
+                for g in games_to_show:
+                    games_display += '<li>{}</li>'.format(g[1])
+                games_display += "</ol>"
+                self.update_message_chain(games_display, priority="low", response_required=False)
+            self.update_message_chain("I hope this satisfies your needs. Thanks for stopping by!", priority="low", response_required=False)
+            self.modify(act, action='finish_it')
+        # self.update_message_chain("Say something I'm givbing up on you...", priority="low")
 
 
 
@@ -359,10 +379,8 @@ class ReasoningEngine(KnowledgeEngine):
         salience = 99)
     def genre_collection(self, act):
         self.update_message_chain("Okay, here are top 10 games that match your request.", priority="high", response_required=False)
-        games_to_show = pull_data_for_suggested_game(self.suggest_game_genres, self.suggest_game_players, self.suggest_game_time)
-        games_display = """ <ol class='ten-games-list'>
-
-        """
+        games_to_show = pull_suggested_game_no_background_info(self.suggest_game_genres, self.suggest_game_players, self.suggest_game_time)
+        games_display = """ <ol class='ten-games-list'>"""
         for g in games_to_show:
             games_display += '<li>{}</li>'.format(g[1])
         
@@ -376,9 +394,6 @@ class ReasoningEngine(KnowledgeEngine):
         salience = 98)
     def finish_it(self):
         self.update_message_chain("Okay, you can go now.", priority="low", response_required=True)
-
-
-
 
 
 ## Specific game selected below ##
@@ -559,7 +574,69 @@ class ReasoningEngine(KnowledgeEngine):
             tag, time = message_text.split("{TAG:TIME} ")
         return time
 
+    def get_known_categories(self, message_text):
+        input_categories = message_text.split(",")
+        
+        ## User input as follows:
+        ## published year is 2001, max players are 5, time to play is 2 hours, genre is economics
+
+        for cat in input_categories:
+            # Getting the published year
+            
+            if ('publish' or 'published') in cat:
+                words = cat.split()
+                for word in words:
+                    if str.isdigit(word):
+                        print("yearpublished word is digit:", word)
+                        if self.known_categories["yearpublished"] == "":
+                            self.known_categories["yearpublished"] = word + ".0"
+                            break
+            # Getting the number of players
+            elif ('player' or 'players') in cat:
+                words = cat.split()
+                for word in words:
+                    if str.isdigit(word):
+                        print("players word is digit:", word)
+                        if self.known_categories["maxplayers"] == "":
+                            self.known_categories["maxplayers"] = str(word) + ".0"
+                            break
+            elif ('time' or 'playtime' or 'timer') in cat:
+                words = cat.split()
+                for word in words:
+                    minutes = 0
+                    if str.isdigit(word):
+                        print("time entered:", word)
+                        if len(word) == 1:
+                            minutes = int(word)
+                            minutes *= 60
+                            print("time converted to mins:", minutes)
+                        if minutes != 0:
+                            if self.known_categories["playingtime"] == "":
+                                self.known_categories["playingtime"] = str(minutes) + ".0"
+                        else:
+                            if self.known_categories["playingtime"] == "":
+                                self.known_categories["playingtime"] = word + ".0"
+                        break
+            elif ('genre' or 'category') in cat:
+                cat = cat.split()
+                print("category final word:", cat[-1])
+                self.known_categories["category0"] = cat[-1]
+            else:
+                words = cat.split()
+                for w in words:
+                    print(w)
+                print("SOM TING WONG. Unable to find described words in the sentence. hmmm")
+        if self.known_categories["playingtime"] != "" and self.known_categories["maxplayers"] != "" and self.known_categories["yearpublished"] != ""\
+            and self.known_categories["category0"] != "":
+            self.game_dict_populated = True
+
+        ##Need to replace the user categories with ones in the DB - genre with category0-1-2-3
+        ## Check other things that might need replacing. Author or whatever.
+
 
 # r = ReasoningEngine()
-# doc = r.process_nlp("{TAG:Yes/No} no")
-# r.check_yes_no(doc, "{TAG:Yes/No} no")
+# r.get_known_categories('I\'m looking for a game published in 2011, maximum players are 6, playtime = 2 hours, genre is medieval')
+# "yearpublished" : "",
+#             "maxplayers" : "",
+#             "playingtime" : "",
+#             "category0" : ""

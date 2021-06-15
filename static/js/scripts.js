@@ -5,8 +5,8 @@ let tag_map = {
     "GENRE" : "{TAG:GENRE}",
     "NUM_PLAYERS":"{TAG:PLAYERS}",
     "PLAY_TIME" : "{TAG:TIME}",
-    
-    
+    "CATEGORY": "{TAG:CATEGORY}",
+        
     
 }
 
