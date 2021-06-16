@@ -238,7 +238,7 @@ def pull_suggested_game_no_background_info(genre, players, playtime):
     for game in descriptions:
         words = game[0].split()
        
-        final_sentence = sentence = words[1] + " " + words[2] + " " + words[3] + " " + words[4]
+        final_sentence = sentence = words[1] + " " + words[2] + " " + words[3] + " " + words[4] + " " + words[5]
         if "'" in sentence:
             index = sentence.find("'")
             final_sentence = sentence[:index] + "'" + sentence[index:]
@@ -320,6 +320,8 @@ def get_db_column_names(db_name):
         return db_columns
     else:
         print("Unfortunately DB with name '{}' doesn't exist".format(db_name))    
+
+
 
 # asd = get_db_column_names('big_bgg_data')
 # print(asd)

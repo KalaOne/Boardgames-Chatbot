@@ -77,7 +77,7 @@ class ReasoningEngine(KnowledgeEngine):
         self.progress = ""
 
         # UI output
-        self.default_message = {'message': "Default: I'm sorry. I don't know how to help with that just yet. Please try again",
+        self.default_message = {'message': "Default: I'm sorry. I don't know how to help with that just yet. Please refresh the page",
                                 'response_required': True, 'background' : False}
         self.message = []
         self.tags = ""
@@ -86,7 +86,7 @@ class ReasoningEngine(KnowledgeEngine):
         self.suggest_game_genres = None
         self.suggest_game_players = None
         self.suggest_game_time = None
-
+        self.info_type = None
         self.known_categories = {
             "yearpublished" : "",
             "maxplayers" : "",
@@ -96,7 +96,7 @@ class ReasoningEngine(KnowledgeEngine):
         self.game_dict_populated = False
         
         self.ans_g = self.ans_p = self.ans_t = False
-        self.ask_p = self.ask_g = self.ask_t = self.specific_info_question = False 
+        self.ask_p = self.ask_g = self.ask_t = self.specific_info_question = self.general_or_specific = False 
 
         self.ask1 = False
         self.background = False
@@ -211,7 +211,7 @@ class ReasoningEngine(KnowledgeEngine):
                     message = "Selected game: <b>{}</b>.".format(game[0][1])
                     self.boardgame = game[0]
                     self.background_image = game[0][4]
-                    self.update_message_chain(message, response_required=False, priority="high", background=self.background_image)
+                    self.update_message_chain(message, priority="low", response_required=False, background=self.background_image)
                     self.modify(f1, action="game_selected")
                 else: 
                     # Game is not in DB. Suggest alternative
@@ -242,16 +242,79 @@ class ReasoningEngine(KnowledgeEngine):
                         self.update_message_chain(msg.format(req_yes_no), priority="low")
                         
                         
-
+## SPECIFIC GAME INFORMATION JOURNEY BELOW
 
     @Rule(AS.f1 << Fact(action="game_selected"),
         salience=98)
     def game_selected(self, f1):
-        self.update_message_chain("I can help provide almost anything for <b>{}</b> - information, playtime, creators, artists,\
-             number of players required, game rating, you name it! What do you want to know?".format(self.boardgame[1].capitalize())
-            , priority="low", background=self.background_image)
-        self.modify(f1, action="game_journey")
+        info_type_tag = "{REQ:" + "InfoType}"
+        self.update_message_chain("I can help provide almost anything for <b>{}</b> - game information, playtime, creators, artists,\
+            number of players required, game rating, you name it!".format(self.boardgame[1].capitalize())
+            , priority="low", response_required=False, background=self.background_image)
+        self.update_message_chain("{}Do you need <u>specific</u> or <u>general</u> information about {}?".format(info_type_tag, self.boardgame[1]), priority="low")
+        self.modify(f1, action="information")
  
+
+    @Rule(Fact(action="information"),
+        Fact(message_text=MATCH.message_text),
+            salience=95)
+    def determine_info_type(self, message_text):
+        self.check_info_type(message_text)
+        if(self.info_type):
+            if self.info_type == 'specific':
+                self.general_or_specific = True
+                self.declare(Fact(info_type = "specific"))
+            elif self.info_type == 'general':
+                self.general_or_specific = True
+                self.declare(Fact(info_type = "general"))
+            else:
+                self.general_or_specific = False
+                self.update_message_chain("Sorry, that wasn't successful. Specify generic or specific information", priority="low")
+
+
+    @Rule(Fact(action="information"),
+        Fact(info_type="specific"),
+         salience= 95)
+    def provide_specific_info(self):
+        spec_cat_tag = "{REQ:"+"SPEC_CAT}"
+        self.update_message_chain("Okay, indicate what specific information you are looking for? If more than one category, separate then by comma ','", 
+                response_required=True, priority ="low")
+
+       
+
+## General information journey below 
+    @Rule(AS.act << Fact(action="information"),
+        Fact(info_type="general"),
+         salience= 91)
+    def provide_general_info(self, act):
+        print("CURRENT BOARDGAME", self.boardgame)
+        self.update_message_chain("Alright. Showing you description, minimum-maximum number of players, playing time, \
+            and recommended age.", priority="low", response_required=False)
+        message = "<ul class='general_game_info'> \
+                <li> Name: {} </li>\
+                <li> Players: {} - {} </li>\
+                <li> Playing time: {} minutes </li> \
+                <li> Age: {} </li> <br>\
+                <li> Description: {} </li></ul>"
+        strings_to_replace = [
+            ('<[^<]+?/>', ''),
+            ('<.*?>', ''),
+            ('&quot;', '"'),
+            ('&rsquo;', "'"),
+            ('&ndash;', '-'),
+            ('&ldquo;', '"'),
+            ('&rdquo;', '"'),
+        ]
+        for old, new in strings_to_replace:
+            description = re.sub(old, new, self.boardgame[2])
+        self.update_message_chain(message.format(self.boardgame[1], self.boardgame[17].split(".")[0],
+            self.boardgame[18].split(".")[0], self.boardgame[19].split(".")[0], self.boardgame[22],description), 
+            priority="low", response_required=False)
+        self.update_message_chain("I hope this satisfies your needs. Thanks for stopping by!", priority="low", response_required=False)
+        self.modify(act, action='finish_it')
+
+
+## SUGGEST A JOURNEY GAME BELOW
 
     @Rule(Fact(action="suggest_game"),
         AS.f2 << Fact(suggest_game = True),
@@ -301,17 +364,6 @@ class ReasoningEngine(KnowledgeEngine):
             self.update_message_chain("I hope this satisfies your needs. Thanks for stopping by!", priority="low", response_required=False)
             self.modify(act, action='finish_it')
         # self.update_message_chain("Say something I'm givbing up on you...", priority="low")
-
-
-
-
-
-
-
-
-
-
-
 
 ## No journey below ##
     @Rule(Fact(action="suggest_game"),
@@ -397,41 +449,39 @@ class ReasoningEngine(KnowledgeEngine):
 
 
 ## Specific game selected below ##
-
-    @Rule(AS.f1 << Fact(action="game_journey"),
-          Fact(message_text=MATCH.message_text),
-          salience=99)
-    def game_information_journey(self, f1, message_text):
-        # print("FACTS:", self.knowledge)
-        doc = self.process_nlp(message_text)
-        # print out what the tokens are in the user input
-        # print("HEEEEERRRRREEEEEE")
-        # for token in doc:
-        #     print(token.text, token.pos_, token.dep_, token.lemma_)
-        info_type_tag = "{REQ:" + "InfoType}"
-        matches = self.get_multiple_matches(doc, MultiTokenDictionary['game_info'])
-        if len(matches) > 0:
-            print("GAME INFO")
-            self.update_message_chain("Game_info: Ok, let's get you informed!", response_required=False, priority="high")
-            # self.update_message_chain("{}Do you need specific or general information about {}?".format(info_type_tag, self.boardgame[1]), "low", True)
-            self.modify(f1, action="information")
-            self.declare(Fact(info_type=False))
-           
-        else:
-            matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
-            if (len(matches) > 0) :
-                self.update_message_chain("Instructions: Cool, here's how to play Chess!", response_required=False, priority="high")
-                self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = "low")
-                self.declare(Fact(instructions = True))
-                self.modify(f1, action="instructions")
-            else:
-                matches = self.get_multiple_matches(doc, MultiTokenDictionary['reviews'])
-                if (len(matches) > 0) :
-                    print("Reviews")
-                    self.update_message_chain("Reviews: This game has some nice reviews. Check this out:", response_required=False, priority="high")
-                    self.update_message_chain("<strong>Very nice game!</strong>", response_required=False, priority="low")
-                    self.modify(f1, action="reviews")
-                    self.declare(Fact(reviews = True))
+    # @Rule(AS.f1 << Fact(action="game_journey"),
+    #       Fact(message_text=MATCH.message_text),
+    #       salience=99)
+    # def game_information_journey(self, f1, message_text):
+    #     # print("FACTS:", self.knowledge)
+    #     doc = self.process_nlp(message_text)
+    #     # print out what the tokens are in the user input
+    #     # print("HEEEEERRRRREEEEEE")
+    #     # for token in doc:
+    #     #     print(token.text, token.pos_, token.dep_, token.lemma_)
+    #     info_type_tag = "{REQ:" + "InfoType}"
+    #     matches = self.get_multiple_matches(doc, MultiTokenDictionary['game_info'])
+    #     if len(matches) > 0:
+    #         print("GAME INFO")
+    #         self.update_message_chain("Ok, let's get you informed!", response_required=False, priority="high")
+    #         self.update_message_chain("{}Do you need <u>specific</u> or <u>general</u> information about {}?".format(info_type_tag, self.boardgame[1]), "low", True)
+            
+    #         self.modify(f1, action="information")
+        # else:
+        #     matches = self.get_multiple_matches(doc, MultiTokenDictionary['play_instructions'])
+        #     if (len(matches) > 0) :
+        #         self.update_message_chain("Instructions: Cool, here's how to play Chess!", response_required=False, priority="high")
+        #         self.update_message_chain("You move X to Y and then Z goes AAAAAA!", priority = "low")
+        #         self.declare(Fact(instructions = True))
+        #         self.modify(f1, action="instructions")
+        #     else:
+        #         matches = self.get_multiple_matches(doc, MultiTokenDictionary['reviews'])
+        #         if (len(matches) > 0) :
+        #             print("Reviews")
+        #             self.update_message_chain("Reviews: This game has some nice reviews. Check this out:", response_required=False, priority="high")
+        #             self.update_message_chain("<strong>Very nice game!</strong>", response_required=False, priority="low")
+        #             self.modify(f1, action="reviews")
+        #             self.declare(Fact(reviews = True))
     # 
     # if (len(matches) > 0) :
     #     self.update_message_chain("(M)Reviews: This game has some nice reviews. Check this out:", response_required="Random")
@@ -440,73 +490,8 @@ class ReasoningEngine(KnowledgeEngine):
     #     print("AH HELL NAW!")
         
 
-    @Rule(Fact(action="information"),
-        Fact(message_text=MATCH.message_text),
-            salience=95)
-    def determine_info_type(self, message_text):
-        info_type_tag = "{REQ:" + "InfoType}"
-        self.update_message_chain("{}Do you need specific or general information about {}?".format(info_type_tag, self.boardgame[1]), "low", True)
-        print("Decide if specific of general information ", message_text)
-        info_type = self.check_info_type(message_text)
-        print("Information type after function call: ", info_type)
-        if(info_type):
-            if info_type.text == 'specific':
-                self.declare(Fact(info_type = "specific"))
-            elif info_type.text == 'general':
-                self.declare(Fact(info_type = "general"))
-            else:
-                self.update_message_chain("Sorry, that wasn't successful. Specify generic or specific information", priority="low")
+    
 
-
-    @Rule(Fact(action="information"),
-        Fact(info_type="specific"),
-         salience= 92)
-    def provide_specific_info(self):
-        print("SPECIFIC INFORMATION")
-        self.update_message_chain("Okay, what exactly do you want to know?", response_required=True, priority ="low")
-       
-
-
-    @Rule(Fact(action="information"),
-        Fact(info_type="general"),
-         salience= 91)
-    def provide_general_info(self):
-        print("GENERAL INFO")
-        self.update_message_chain("Alright. Showing you description, minimum-maximum number of players, playing time, \
-            recommended age.", priority="low", response_required=False)
-        message = "<ul class='general_game_info'> \
-                <li> Name: {} </li><br>\
-                <li> Description: {} </li>\
-                <li> Players: {} - {} </li>\
-                <li> Playing time: {} </li> \
-                <li> Age: {} </li> </ul>"
-        strings_to_replace = [
-            ('<[^<]+?/>', ''),
-            ('<.*?>', ''),
-            ('&quot;', '"'),
-            ('&rsquo;', "'"),
-            ('&ndash;', '-'),
-            ('&ldquo;', '"'),
-            ('&rdquo;', '"'),
-        ]
-        for old, new in strings_to_replace:
-            print(old, new)
-            description = re.sub(old, new, self.boardgame[2])
-        print(description)
-
-
-            
-        # self.update_message_chain("General information about {}.".format(game_content['name']), response_required=False, priority="low")
-        # self.update_message_chain(game_content['description'], response_required=False, priority="low")
-        # self.update_message_chain("Would you like to know anything else?", priority="low")
-        # self.declare(Fact(more_info_needed = True))
-
-
-    @Rule(Fact(action="specific_information"), 
-        Fact(message_text=MATCH.message_text),
-        salience = 90)
-    def provide_specific_infor(self, message_text):
-        print("SPECIFIC INFORMATION INCOMING!")
 
     @Rule(Fact(action="instructions"),
         Fact(instructions = True),
@@ -543,17 +528,15 @@ class ReasoningEngine(KnowledgeEngine):
         return choice
 
     def check_info_type(self, message_text):
-        info_type = None
-        doc = self.process_nlp(message_text.split(" ")[-1])
         if "{TAG:S/G}" in message_text:
-            info_type = self.get_multiple_matches(doc, MultiTokenDictionary['specific'])
-            if (info_type is None) or (type(info_type) == str and (info_type == '')):
-                info_type = self.get_multiple_matches(doc, MultiTokenDictionary['general'])
-            elif (info_type is None) or info_type.text == '':
-                info_type = self.get_multiple_matches(doc, MultiTokenDictionary['general'])
-        print("Info_type: ", info_type)
-        if info_type is not None:
-            return info_type
+            if ('specific' or 'exact' or 'explicit' or 'precise') in message_text:
+                self.info_type = 'specific'
+            elif ('general' or 'generic' or 'universal') in message_text:
+                self.info_type = 'general'
+            else:
+                print("Neither specific or generic information.")
+                
+
         
 
     def get_genre(self, message_text):
@@ -576,10 +559,6 @@ class ReasoningEngine(KnowledgeEngine):
 
     def get_known_categories(self, message_text):
         input_categories = message_text.split(",")
-        
-        ## User input as follows:
-        ## published year is 2001, max players are 5, time to play is 2 hours, genre is economics
-
         for cat in input_categories:
             # Getting the published year
             
@@ -600,6 +579,7 @@ class ReasoningEngine(KnowledgeEngine):
                         if self.known_categories["maxplayers"] == "":
                             self.known_categories["maxplayers"] = str(word) + ".0"
                             break
+            # Get playing time
             elif ('time' or 'playtime' or 'timer') in cat:
                 words = cat.split()
                 for word in words:
@@ -617,6 +597,7 @@ class ReasoningEngine(KnowledgeEngine):
                             if self.known_categories["playingtime"] == "":
                                 self.known_categories["playingtime"] = word + ".0"
                         break
+            # Getting Genre
             elif ('genre' or 'category') in cat:
                 cat = cat.split()
                 print("category final word:", cat[-1])
@@ -633,6 +614,9 @@ class ReasoningEngine(KnowledgeEngine):
         ##Need to replace the user categories with ones in the DB - genre with category0-1-2-3
         ## Check other things that might need replacing. Author or whatever.
 
+    def get_specific_information(self, message_text):
+        if "{TAG:SPECIFIC_CATEGORY}" in message_text:
+            print("yeaaaah!")
 
 # r = ReasoningEngine()
 # r.get_known_categories('I\'m looking for a game published in 2011, maximum players are 6, playtime = 2 hours, genre is medieval')
