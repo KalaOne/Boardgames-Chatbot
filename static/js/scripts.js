@@ -6,7 +6,7 @@ let tag_map = {
     "NUM_PLAYERS":"{TAG:PLAYERS}",
     "PLAY_TIME" : "{TAG:TIME}",
     "CATEGORY": "{TAG:CATEGORY}",
-    "SPEC_CAT" : "{TAG:SPECIFIC_CATEGORY}"
+    "Spec_category" : "{TAG:SPECIFIC_CAT}",
     
 }
 

@@ -279,7 +279,7 @@ def pull_suggested_game_with_background_info(category_dict):
     for game in descriptions:
         words = game[0].split()
        
-        final_sentence = sentence = words[1] + " " + words[2] + " " + words[3] + " " + words[4]
+        final_sentence = sentence = words[1] + " " + words[2] + " " + words[3] + " " + words[4] + " " + words[5]
         if "'" in sentence:
             index = sentence.find("'")
             final_sentence = sentence[:index] + "'" + sentence[index:]
@@ -322,6 +322,27 @@ def get_db_column_names(db_name):
         print("Unfortunately DB with name '{}' doesn't exist".format(db_name))    
 
 
+def get_specific_cat_info_from_db(game):
+    desc = game[2].split()
+    desc_to_pull = desc[1] + " " + desc[2] + " " + desc[3] + " " + desc[4] + " " + desc[5]
+    # desc = game.split()
+    # desc_to_pull = desc[1] + " " + desc[2] + " " + desc[3] + " " + desc[4] + " " + desc[5]
+    cur = conn.cursor()
+    game_specific_categories = None
+    query_bgg_data = """ select designer0,artist0,artist1,artist2,category0,category1,category2,category3, \
+                honor0,honor1,honor2 from bgg_data where description like '%{}%'""".format(desc_to_pull)
+    try:
+        cur.execute(query_bgg_data)
+        game_specific_categories = cur.fetchall()
+    except psycopg2.DatabaseError as e:
+        print(e)
+        return e
+
+    return game_specific_categories
+    
+
+
+# asd = get_specific_cat_info_from_db("game is a time of unrest")
 
 # asd = get_db_column_names('big_bgg_data')
 # print(asd)
